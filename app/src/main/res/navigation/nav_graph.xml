@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph.xml"
+    app:startDestination="@id/floorPlanListFragment">
+
+    <fragment
+        android:id="@+id/augmentedRealityFragment"
+        android:name="de.morhenn.ar_localization.fragments.AugmentedRealityFragment"
+        android:label="ArFragment">
+
+    </fragment>
+    <fragment
+        android:id="@+id/floorPlanListFragment"
+        android:name="de.morhenn.ar_localization.fragments.FloorPlanListFragment"
+        android:label="FloorPlanListFragment" >
+        <action
+            android:id="@+id/action_floorPlanListFragment_to_augmentedRealityFragment"
+            app:destination="@id/augmentedRealityFragment" />
+    </fragment>
+
+</navigation>
