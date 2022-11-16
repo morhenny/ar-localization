@@ -8,7 +8,8 @@ data class FloorPlan(
     var info: String,
     //TODO author / owner / permissions
     var mainAnchor: CloudAnchor,
-    var mappingPointList: List<MappingPoint>,
-    var cloudAnchorList: List<CloudAnchor>
-
-)
+    var mappingPointList: MutableList<MappingPoint>,
+    var cloudAnchorList: MutableList<CloudAnchor>,
+) {
+    constructor(mainAnchor: CloudAnchor) : this("", "", mainAnchor, mutableListOf(), mutableListOf())
+}

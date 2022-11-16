@@ -18,13 +18,13 @@ class FloorPlanViewModel : ViewModel() {
 
     private fun loadDebugFloorPlan() {
         val mainCloudAnchor = CloudAnchor("main", "noRealID", 0.0, 0.0, 0.0, 0.0)
-        val mappingPoint = MappingPoint(1f, 1f, 0f, SerializableQuaternion())
+        val mappingPoint = MappingPoint(1f, 1f, 0f)
         val floorPlan = FloorPlan(
             "Debug Floor Plan",
             "This is a debug floor plan. It is used for testing purposes only.",
             mainCloudAnchor,
-            listOf(mappingPoint),
-            listOf(mainCloudAnchor)
+            mutableListOf(mappingPoint),
+            mutableListOf(mainCloudAnchor)
         )
         floorPlanList.add(0, floorPlan)
     }
