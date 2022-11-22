@@ -6,13 +6,13 @@
 
     <fragment
         android:id="@+id/augmentedRealityFragment"
-        android:name="de.morhenn.ar_localization.fragments.AugmentedRealityFragment"
+        android:name="de.morhenn.ar_localization.ar.AugmentedRealityFragment"
         android:label="ArFragment">
 
     </fragment>
     <fragment
         android:id="@+id/floorPlanListFragment"
-        android:name="de.morhenn.ar_localization.fragments.FloorPlanListFragment"
+        android:name="de.morhenn.ar_localization.floorPlan.FloorPlanListFragment"
         android:label="FloorPlanListFragment" >
         <action
             android:id="@+id/action_floorPlanListFragment_to_augmentedRealityFragment"

@@ -1,4 +1,4 @@
-package de.morhenn.ar_localization.adapter
+package de.morhenn.ar_localization.floorPlan
 
 import android.view.LayoutInflater
 import android.view.ViewGroup

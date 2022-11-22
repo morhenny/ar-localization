@@ -1,11 +1,9 @@
-package de.morhenn.ar_localization.viewmodel
+package de.morhenn.ar_localization.floorPlan
 
 import androidx.lifecycle.ViewModel
-import de.morhenn.ar_localization.adapter.FloorPlanListAdapter
 import de.morhenn.ar_localization.model.CloudAnchor
 import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.model.MappingPoint
-import de.morhenn.ar_localization.model.SerializableQuaternion
 
 class FloorPlanViewModel : ViewModel() {
 

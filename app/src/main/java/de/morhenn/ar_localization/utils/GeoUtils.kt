@@ -1,10 +1,8 @@
 package de.morhenn.ar_localization.utils
 
 import com.google.android.gms.maps.model.LatLng
-import kotlin.math.asin
-import kotlin.math.atan2
-import kotlin.math.cos
-import kotlin.math.sin
+import io.github.sceneview.math.Position
+import kotlin.math.*
 
 object GeoUtils {
 
@@ -37,5 +35,13 @@ object GeoUtils {
         val latLngOnlyX = getLatLngByDistanceAndBearing(startLat, startLng, (startHeading + 90.0) % 360, offsetX / 1000.0)
 
         return getLatLngByDistanceAndBearing(latLngOnlyX.latitude, latLngOnlyX.longitude, startHeading, -offsetZ / 1000.0)
+    }
+
+    //calculate distance in meters between 2 positions in the ar world
+    fun distanceBetweenTwo3dCoordinates(worldPos1: Position, worldPos2: Position): Float {
+        val x = worldPos1.x - worldPos2.x
+        val y = worldPos1.y - worldPos2.y
+        val z = worldPos1.z - worldPos2.z
+        return sqrt(x * x + y * y + z * z)
     }
 }

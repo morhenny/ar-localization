@@ -1,10 +1,13 @@
-package de.morhenn.ar_localization.filament
+package de.morhenn.ar_localization.ar
 
 import android.content.Context
 import android.opengl.Matrix
 import com.google.android.filament.*
 import com.google.ar.core.Camera
 import com.google.ar.core.Pose
+import de.morhenn.ar_localization.extensions.loadMaterial
+import de.morhenn.ar_localization.extensions.putShort
+import de.morhenn.ar_localization.extensions.putVertex
 import io.github.sceneview.math.Position
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

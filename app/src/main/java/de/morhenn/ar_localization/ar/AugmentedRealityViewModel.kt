@@ -1,4 +1,4 @@
-package de.morhenn.ar_localization.viewmodel
+package de.morhenn.ar_localization.ar
 
 import androidx.lifecycle.ViewModel
 

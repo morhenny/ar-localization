@@ -1,4 +1,4 @@
-package de.morhenn.ar_localization.fragments
+package de.morhenn.ar_localization.ar
 
 import android.net.Uri
 import android.os.Bundle
@@ -12,56 +12,35 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
+import com.google.ar.core.Pose
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ResourceManager
+import de.morhenn.ar_localization.ar.ArState.*
+import de.morhenn.ar_localization.ar.ModelName.*
 import de.morhenn.ar_localization.databinding.FragmentAugmentedRealityBinding
-import de.morhenn.ar_localization.filament.AnchorHostingPoint
-import de.morhenn.ar_localization.fragments.AugmentedRealityFragment.ArState.*
-import de.morhenn.ar_localization.fragments.AugmentedRealityFragment.ModelName.AXIS
-import de.morhenn.ar_localization.fragments.AugmentedRealityFragment.ModelName.DEBUG_CUBE
 import de.morhenn.ar_localization.model.CloudAnchor
 import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.model.MappingPoint
 import de.morhenn.ar_localization.model.SerializableQuaternion
 import de.morhenn.ar_localization.utils.GeoUtils
-import de.morhenn.ar_localization.viewmodel.AugmentedRealityViewModel
 import io.github.sceneview.Filament
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
 import io.github.sceneview.ar.arcore.LightEstimationMode
 import io.github.sceneview.ar.arcore.planeFindingEnabled
+import io.github.sceneview.ar.arcore.position
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
-import io.github.sceneview.math.Scale
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.toFloat3
+import io.github.sceneview.math.toVector3
 import io.github.sceneview.model.await
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.*
 
 class AugmentedRealityFragment : Fragment() {
-
-    enum class ArState(
-        val progressBarVisibility: Int = View.INVISIBLE,
-        val fabEnabled: Boolean = false,
-        val anchorCircleEnabled: Boolean = false,
-    ) {
-        NOT_INITIALIZED,
-        PLACE_ANCHOR(fabEnabled = true, anchorCircleEnabled = true),
-        SCAN_ANCHOR_CIRCLE(anchorCircleEnabled = true),
-        HOSTING(progressBarVisibility = View.VISIBLE, anchorCircleEnabled = true),
-        HOST_SUCCESS,
-        HOST_FAILED(fabEnabled = true),
-        MAPPING,
-    }
-
-    enum class ArMode {
-        CREATE_FLOOR_PLAN,
-        LOCALIZE
-    }
-
-    enum class ModelName {
-        DEBUG_CUBE,
-        AXIS,
-    }
 
     private var arState: ArState = NOT_INITIALIZED
     private var arMode: ArMode = ArMode.CREATE_FLOOR_PLAN
@@ -95,8 +74,10 @@ class AugmentedRealityFragment : Fragment() {
 
     private var floorPlan: FloorPlan? = null
 
+    private var lastMappingPosition = Position(0f, 0f, 0f)
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAugmentedRealityBinding.inflate(inflater, container, false)
 
         return binding.root
@@ -123,14 +104,14 @@ class AugmentedRealityFragment : Fragment() {
 
         binding.arFabAddMappingPoint.setOnClickListener {
             if (arState == MAPPING) {
-                val newMappingPoint = ArModelNode(PlacementMode.DISABLED).apply {
-                    parent = initialAnchorNode
-                    worldPosition = sceneView.camera.position
-                    setModel(modelMap[DEBUG_CUBE])
-                    scale = Scale(0.5f)
-                    //TODO just the temporary solution for now to test
-                }
-                listOfMappingPoints.add(newMappingPoint)
+                placeMappingPoint()
+            }
+        }
+        binding.arFabAddCloudAnchor.setOnClickListener {
+            if (arState == MAPPING) {
+                resetAnchorHostingCircle()
+                resetPlacementNode()
+                updateState(PLACE_ANCHOR)
             }
         }
 
@@ -161,6 +142,14 @@ class AugmentedRealityFragment : Fragment() {
                     hostCloudAnchor()
                 }
             }
+            MAPPING -> {
+                if (GeoUtils.distanceBetweenTwo3dCoordinates(lastMappingPosition, frame.camera.pose.position) > MAPPING_DISTANCE_THRESHOLD) {
+                    lastMappingPosition = frame.camera.pose.position
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        placeMappingPoint()
+                    }
+                }
+            }
             else -> {} //NOOP
         }
     }
@@ -171,7 +160,7 @@ class AugmentedRealityFragment : Fragment() {
             updateState(PLACE_ANCHOR)
             placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
                 parent = sceneView
-                isVisible = true
+                isVisible = false
             }
         } else {
             //TODO
@@ -184,20 +173,31 @@ class AugmentedRealityFragment : Fragment() {
             if (!isInitialAnchorPlaced) {
                 initialAnchorNode = ArModelNode(PlacementMode.DISABLED).apply {
                     parent = sceneView
-                    anchor = placementNode.createAnchor()
                     isVisible = false
-                    setModel(modelMap[DEBUG_CUBE])
+                    setModel(modelMap[AXIS])
+                    anchor = placementNode.createAnchor()
+                    resetPlacementNode()
                 }
             } else {
                 initialAnchorNode?.let { initialAnchorNode ->
                     trackingAnchorNode = ArModelNode(PlacementMode.DISABLED).apply {
-                        parent = initialAnchorNode
-                        quaternion = initialAnchorNode.quaternion
+                        parent = sceneView
                         isVisible = false
                         setModel(modelMap[AXIS])
+                        val anchorPose = Pose(placementNode.pose?.translation, initialAnchorNode.quaternion.toFloatArray())
+                        placementNode.lastHitResult?.let {
+                            anchor = it.trackable.createAnchor(anchorPose)
+                            resetPlacementNode()
+                        } ?: run {
+                            Log.e("O_O", "lastHitResult is null, no anchor created for trackingAnchorNode")
+                            updateState(PLACE_ANCHOR)
+                        }
                     }
+
                 }
             }
+        } ?: run {
+            Log.e("O_O", "onPlaceClicked: placementNode is null")
         }
     }
 
@@ -209,14 +209,12 @@ class AugmentedRealityFragment : Fragment() {
                     if (success) {
                         updateState(MAPPING)
                         anchorNode.isVisible = true
-                        //TODO include geospatial localization //TODO local quaternion correct? or is worldQuaternion needed?
+                        //TODO include geospatial localization
                         floorPlan = FloorPlan(CloudAnchor("initial", anchor.cloudAnchorId, 52.0, 13.0, 70.0, 0.0, SerializableQuaternion(anchorNode.quaternion)))
                         isInitialAnchorPlaced = true
                         Log.d("O_O", "Cloud anchor hosted successfully")
                     } else {
                         onHostingFailed()
-                        updateState(PLACE_ANCHOR)
-                        Log.d("O_O", "Cloud anchor hosting failed")
                     }
                 }
             }
@@ -226,13 +224,11 @@ class AugmentedRealityFragment : Fragment() {
                     if (success) {
                         updateState(MAPPING)
                         anchorNode.isVisible = true
-                        listOfAnchorNodes.add(anchorNode)
                         addAnchorAndMappingPointsToFloorPlan(anchorNode, anchor.cloudAnchorId)
+                        listOfAnchorNodes.add(anchorNode)
                         Log.d("O_O", "Cloud anchor hosted successfully")
                     } else {
                         onHostingFailed()
-                        updateState(PLACE_ANCHOR)
-                        Log.d("O_O", "Cloud anchor hosting failed")
                     }
                 }
             }
@@ -241,32 +237,66 @@ class AugmentedRealityFragment : Fragment() {
 
     private fun onHostingFailed() {
         Toast.makeText(requireContext(), "Hosting failed", Toast.LENGTH_SHORT).show()
-        //TODO
+        resetAnchorHostingCircle()
+        updateState(PLACE_ANCHOR)
+        Log.d("O_O", "Cloud anchor hosting failed")
+    }
+
+    private fun placeMappingPoint() {
+        val mappingAnchor = if (listOfAnchorNodes.isEmpty()) {
+            initialAnchorNode!!
+        } else {
+            listOfAnchorNodes.last()
+        }
+        val newMappingPoint = ArModelNode(PlacementMode.DISABLED).apply {
+            parent = mappingAnchor
+            worldPosition = sceneView.camera.position.apply { --y }
+            setModel(modelMap[BALL])
+        }
+        listOfMappingPoints.add(newMappingPoint)
+    }
+
+    private fun resetAnchorHostingCircle() {
+        anchorHostingCircle.destroy()
+        anchorHostingCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
+    }
+
+    private fun resetPlacementNode() {
+        placementNode?.destroy()
+        placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+            parent = sceneView
+            isVisible = false
+        }
     }
 
     private fun addAnchorAndMappingPointsToFloorPlan(anchorNode: ArModelNode, cloudAnchorId: String) {
         floorPlan?.let { floorPlan ->
-            val lastAnchor = if (floorPlan.cloudAnchorList.isEmpty()) {
-                floorPlan.mainAnchor
+            //Use offset to last placed anchor to calculate latLng and relative x,y,z to the initial Anchor, using the lastAnchors values
+            val lastAnchor = if (listOfAnchorNodes.isEmpty()) {
+                Pair(floorPlan.mainAnchor, initialAnchorNode!!)
             } else {
-                floorPlan.cloudAnchorList.last()
+                Pair(floorPlan.cloudAnchorList.last(), listOfAnchorNodes.last())
             }
+            val posOffsetToLastAnchor = lastAnchor.second.worldToLocalPosition(anchorNode.worldPosition.toVector3()).toFloat3()
+            val xOffset = posOffsetToLastAnchor.x + lastAnchor.first.xToMain
+            val yOffset = posOffsetToLastAnchor.y + lastAnchor.first.yToMain
+            val zOffset = posOffsetToLastAnchor.z + lastAnchor.first.zToMain
 
-            val newLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(lastAnchor.lat, lastAnchor.lng, lastAnchor.compassHeading, anchorNode.position.x, anchorNode.position.z)
-            val newAlt = lastAnchor.alt + (lastAnchor.yToMain - anchorNode.position.y)
-            val newX = lastAnchor.xToMain + anchorNode.position.x
-            val newY = lastAnchor.yToMain + anchorNode.position.y
-            val newZ = lastAnchor.zToMain + anchorNode.position.z
+            val newLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(lastAnchor.first.lat, lastAnchor.first.lng, lastAnchor.first.compassHeading, posOffsetToLastAnchor.x, posOffsetToLastAnchor.z)
+            val newAlt = lastAnchor.first.alt + posOffsetToLastAnchor.y
 
             //TODO text of cloud anchor dynamically
-            val newAnchor = CloudAnchor("anchor", cloudAnchorId, newLatLng.latitude, newLatLng.longitude, newAlt, lastAnchor.compassHeading, newX, newY, newZ, lastAnchor.relativeQuaternion)
+            val newAnchor = CloudAnchor("anchor", cloudAnchorId, newLatLng.latitude, newLatLng.longitude, newAlt, lastAnchor.first.compassHeading,
+                xOffset, yOffset, zOffset, lastAnchor.first.relativeQuaternion)
             listOfMappingPoints.forEach {
-                val x = it.position.x + newAnchor.xToMain
-                val y = it.position.y + newAnchor.yToMain
-                val z = it.position.z + newAnchor.zToMain
+                val x = it.position.x + lastAnchor.first.xToMain
+                val y = it.position.y + lastAnchor.first.yToMain
+                val z = it.position.z + lastAnchor.first.zToMain
                 val point = MappingPoint(x, y, z)
                 floorPlan.mappingPointList.add(point)
+                it.parent = null //Remove the mappingPoint from the rendered scene
             }
+            listOfMappingPoints.clear()
             floorPlan.cloudAnchorList.add(newAnchor)
         }
     }
@@ -293,6 +323,10 @@ class AugmentedRealityFragment : Fragment() {
             .setSource(context, Uri.parse("models/axis.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
+        modelMap[BALL] = ModelRenderable.builder()
+            .setSource(context, Uri.parse("models/icoSphere.glb"))
+            .setIsFilamentGltf(true)
+            .await(lifecycle)
     }
 
     override fun onDestroy() {
@@ -300,5 +334,10 @@ class AugmentedRealityFragment : Fragment() {
         ResourceManager.getInstance().destroyAllResources()
 
         super.onDestroy()
+    }
+
+    companion object {
+        private const val TAG = "AugmentedRealityFragment"
+        private const val MAPPING_DISTANCE_THRESHOLD = 1 //distance in meters between mapping points
     }
 }

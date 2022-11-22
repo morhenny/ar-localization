@@ -1,4 +1,4 @@
-package de.morhenn.ar_localization.filament
+package de.morhenn.ar_localization.extensions
 
 import android.content.Context
 import com.google.android.filament.Engine
