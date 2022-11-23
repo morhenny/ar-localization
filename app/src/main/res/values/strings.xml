@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">AR-Localization</string>
     <string name="description_fab_floor_plan">Button to create a new Floor Plan</string>
+    <string name="ar_fab_place">Place</string>
+    <string name="ar_fab_confirm">Confirm</string>
+    <string name="ar_fab_hosting">Hosting</string>
+    <string name="ar_fab_resolve">Resolve</string>
+    <string name="ar_fab_new_anchor">New Anchor</string>
+
 </resources>

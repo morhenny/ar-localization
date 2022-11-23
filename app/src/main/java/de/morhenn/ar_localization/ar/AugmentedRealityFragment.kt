@@ -7,18 +7,23 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.navGraphViewModels
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
 import com.google.ar.core.Pose
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ResourceManager
+import de.morhenn.ar_localization.R
 import de.morhenn.ar_localization.ar.ArState.*
 import de.morhenn.ar_localization.ar.ModelName.*
 import de.morhenn.ar_localization.databinding.FragmentAugmentedRealityBinding
+import de.morhenn.ar_localization.floorPlan.FloorPlanViewModel
 import de.morhenn.ar_localization.model.CloudAnchor
 import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.model.MappingPoint
@@ -53,6 +58,7 @@ class AugmentedRealityFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModelAR: AugmentedRealityViewModel by viewModels()
+    private val viewModelFloorPlan: FloorPlanViewModel by navGraphViewModels(R.id.nav_graph_xml)
 
     private lateinit var sceneView: ArSceneView
 
@@ -102,18 +108,7 @@ class AugmentedRealityFragment : Fragment() {
             }
         }
 
-        binding.arFabAddMappingPoint.setOnClickListener {
-            if (arState == MAPPING) {
-                placeMappingPoint()
-            }
-        }
-        binding.arFabAddCloudAnchor.setOnClickListener {
-            if (arState == MAPPING) {
-                resetAnchorHostingCircle()
-                resetPlacementNode()
-                updateState(PLACE_ANCHOR)
-            }
-        }
+        initializeUIElements()
 
         sceneView.onArFrame = { frame ->
             onArFrame(frame)
@@ -151,6 +146,27 @@ class AugmentedRealityFragment : Fragment() {
                 }
             }
             else -> {} //NOOP
+        }
+    }
+
+    private fun initializeUIElements() {
+        binding.arExtendedFab.setOnClickListener {
+            when (arState.fabState) {
+                ArFabState.PLACE -> onPlaceClicked()
+                ArFabState.RESOLVE -> TODO()
+                ArFabState.NEW_ANCHOR -> {
+                    resetAnchorHostingCircle()
+                    resetPlacementNode()
+                    updateState(PLACE_ANCHOR)
+                }
+                else -> {} //NO-OP
+            }
+        }
+        binding.arFabConfirm.setOnClickListener {
+            onConfirmClicked()
+        }
+        binding.arFabUndo.setOnClickListener {
+            onUndoClicked()
         }
     }
 
@@ -199,6 +215,24 @@ class AugmentedRealityFragment : Fragment() {
         } ?: run {
             Log.e("O_O", "onPlaceClicked: placementNode is null")
         }
+    }
+
+    private fun onConfirmClicked() {
+        //TODO ask the user for name and info of the floorplan
+        floorPlan?.let {
+            it.name = "Freshly created floorplan"
+            it.info = "Some information"
+            addRemainingMappingPointsToFloorPlan()
+            viewModelFloorPlan.floorPlanList.add(it)
+            findNavController().popBackStack()
+        } ?: run {
+            Toast.makeText(requireContext(), "No floor plan created yet, cannot confirm", Toast.LENGTH_SHORT).show()
+            Log.e("O_O", "onConfirmClicked: floorPlan is null")
+        }
+    }
+
+    private fun onUndoClicked() {
+        TODO("Not yet implemented")
     }
 
     private fun hostCloudAnchor() {
@@ -288,28 +322,57 @@ class AugmentedRealityFragment : Fragment() {
             //TODO text of cloud anchor dynamically
             val newAnchor = CloudAnchor("anchor", cloudAnchorId, newLatLng.latitude, newLatLng.longitude, newAlt, lastAnchor.first.compassHeading,
                 xOffset, yOffset, zOffset, lastAnchor.first.relativeQuaternion)
-            listOfMappingPoints.forEach {
-                val x = it.position.x + lastAnchor.first.xToMain
-                val y = it.position.y + lastAnchor.first.yToMain
-                val z = it.position.z + lastAnchor.first.zToMain
-                val point = MappingPoint(x, y, z)
-                floorPlan.mappingPointList.add(point)
-                it.parent = null //Remove the mappingPoint from the rendered scene
-            }
-            listOfMappingPoints.clear()
+
+            addMappingPointsAndClearList(lastAnchor.first)
             floorPlan.cloudAnchorList.add(newAnchor)
         }
+    }
+
+    private fun addRemainingMappingPointsToFloorPlan() {
+        floorPlan?.let { floorPlan ->
+            val lastAnchor = if (listOfAnchorNodes.isEmpty()) {
+                floorPlan.mainAnchor
+            } else {
+                floorPlan.cloudAnchorList.last()
+            }
+            addMappingPointsAndClearList(lastAnchor)
+        }
+    }
+
+    private fun addMappingPointsAndClearList(lastAnchor: CloudAnchor) {
+        listOfMappingPoints.forEach {
+            val x = it.position.x + lastAnchor.xToMain
+            val y = it.position.y + lastAnchor.yToMain
+            val z = it.position.z + lastAnchor.zToMain
+            val point = MappingPoint(x, y, z)
+            floorPlan!!.mappingPointList.add(point)
+            it.parent = null //Remove the mappingPoint from the rendered scene
+        }
+        listOfMappingPoints.clear()
     }
 
     private fun updateState(state: ArState) {
         arState = state
         anchorHostingCircle.enabled = arState.anchorCircleEnabled
+        binding.arFabConfirm.visibility = arState.fabConfirmVisibility
         binding.arProgressBar.visibility = arState.progressBarVisibility
         binding.arExtendedFab.isEnabled = arState.fabEnabled
-        binding.arExtendedFab.setOnClickListener {
-            when (arState) {
-                PLACE_ANCHOR -> onPlaceClicked()
-                else -> {} //NOOP
+        when (arState.fabState) {
+            ArFabState.PLACE -> {
+                binding.arExtendedFab.text = getString(R.string.ar_fab_place)
+                binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_place_item_24)
+            }
+            ArFabState.RESOLVE -> {
+                binding.arExtendedFab.text = getString(R.string.ar_fab_resolve)
+                binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_cloud_download_24)
+            }
+            ArFabState.HOST -> {
+                binding.arExtendedFab.text = getString(R.string.ar_fab_hosting)
+                binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_cloud_upload_24)
+            }
+            ArFabState.NEW_ANCHOR -> {
+                binding.arExtendedFab.text = getString(R.string.ar_fab_new_anchor)
+                binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_add_24)
             }
         }
     }
