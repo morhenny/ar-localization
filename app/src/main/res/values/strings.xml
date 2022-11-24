@@ -6,5 +6,11 @@
     <string name="ar_fab_hosting">Hosting</string>
     <string name="ar_fab_resolve">Resolve</string>
     <string name="ar_fab_new_anchor">New Anchor</string>
+    <string name="new_anchor_dialog_input_hint">Location description (ex. Room-Number)</string>
+    <string name="new_anchor_dialog_title">Add new Cloud Anchor</string>
+    <string name="new_anchor_dialog_info">Enter a name for the cloud anchor \nThis can be used to search while localizing</string>
+    <string name="new_anchor_dialog_button_confirm">Confirm</string>
+    <string name="new_anchor_dialog_button_cancel">Cancel</string>
+    <string name="dialog_new_anchor_text_error">Please enter a text first!</string>
 
 </resources>

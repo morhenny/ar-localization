@@ -1,5 +1,6 @@
 package de.morhenn.ar_localization.ar
 
+import android.app.AlertDialog
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -22,6 +23,7 @@ import com.google.ar.sceneform.rendering.ResourceManager
 import de.morhenn.ar_localization.R
 import de.morhenn.ar_localization.ar.ArState.*
 import de.morhenn.ar_localization.ar.ModelName.*
+import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
 import de.morhenn.ar_localization.databinding.FragmentAugmentedRealityBinding
 import de.morhenn.ar_localization.floorPlan.FloorPlanViewModel
 import de.morhenn.ar_localization.model.CloudAnchor
@@ -81,6 +83,7 @@ class AugmentedRealityFragment : Fragment() {
     private var floorPlan: FloorPlan? = null
 
     private var lastMappingPosition = Position(0f, 0f, 0f)
+    private var newAnchorText: String = ""
 
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -154,11 +157,7 @@ class AugmentedRealityFragment : Fragment() {
             when (arState.fabState) {
                 ArFabState.PLACE -> onPlaceClicked()
                 ArFabState.RESOLVE -> TODO()
-                ArFabState.NEW_ANCHOR -> {
-                    resetAnchorHostingCircle()
-                    resetPlacementNode()
-                    updateState(PLACE_ANCHOR)
-                }
+                ArFabState.NEW_ANCHOR -> onNewAnchorClicked()
                 else -> {} //NO-OP
             }
         }
@@ -233,6 +232,27 @@ class AugmentedRealityFragment : Fragment() {
 
     private fun onUndoClicked() {
         TODO("Not yet implemented")
+    }
+
+    private fun onNewAnchorClicked() {
+        val dialogBinding = DialogNewAnchorBinding.inflate(LayoutInflater.from(requireContext()))
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setView(dialogBinding.root)
+        val dialog = builder.show()
+        dialogBinding.dialogNewAnchorButtonConfirm.setOnClickListener {
+            if (dialogBinding.dialogNewAnchorInputText.text.toString().isNotEmpty()) {
+                resetAnchorHostingCircle()
+                resetPlacementNode()
+                updateState(PLACE_ANCHOR)
+                newAnchorText = dialogBinding.dialogNewAnchorInputText.text.toString()
+                dialog.dismiss()
+            } else {
+                dialogBinding.dialogNewAnchorInputLayout.error = getString(R.string.dialog_new_anchor_text_error)
+            }
+        }
+        dialogBinding.dialogNewAnchorButtonCancel.setOnClickListener {
+            dialog.cancel()
+        }
     }
 
     private fun hostCloudAnchor() {
@@ -319,8 +339,7 @@ class AugmentedRealityFragment : Fragment() {
             val newLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(lastAnchor.first.lat, lastAnchor.first.lng, lastAnchor.first.compassHeading, posOffsetToLastAnchor.x, posOffsetToLastAnchor.z)
             val newAlt = lastAnchor.first.alt + posOffsetToLastAnchor.y
 
-            //TODO text of cloud anchor dynamically
-            val newAnchor = CloudAnchor("anchor", cloudAnchorId, newLatLng.latitude, newLatLng.longitude, newAlt, lastAnchor.first.compassHeading,
+            val newAnchor = CloudAnchor(newAnchorText, cloudAnchorId, newLatLng.latitude, newLatLng.longitude, newAlt, lastAnchor.first.compassHeading,
                 xOffset, yOffset, zOffset, lastAnchor.first.relativeQuaternion)
 
             addMappingPointsAndClearList(lastAnchor.first)
