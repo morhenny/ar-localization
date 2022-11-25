@@ -7,4 +7,11 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    //Geospatial Accuracy View
+    <color name="acc_0">#AAFF0000</color>
+    <color name="acc_1">#AAF66D00</color>
+    <color name="acc_2">#AAD7A700</color>
+    <color name="acc_3">#AAA0D600</color>
+    <color name="acc_4">#AA00FF00</color>
 </resources>

@@ -14,9 +14,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
-import com.google.ar.core.Anchor
-import com.google.ar.core.Config
-import com.google.ar.core.Pose
+import com.google.ar.core.*
 import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ResourceManager
@@ -26,17 +24,11 @@ import de.morhenn.ar_localization.ar.ModelName.*
 import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
 import de.morhenn.ar_localization.databinding.FragmentAugmentedRealityBinding
 import de.morhenn.ar_localization.floorPlan.FloorPlanViewModel
-import de.morhenn.ar_localization.model.CloudAnchor
-import de.morhenn.ar_localization.model.FloorPlan
-import de.morhenn.ar_localization.model.MappingPoint
-import de.morhenn.ar_localization.model.SerializableQuaternion
+import de.morhenn.ar_localization.model.*
 import de.morhenn.ar_localization.utils.GeoUtils
 import io.github.sceneview.Filament
 import io.github.sceneview.ar.ArSceneView
-import io.github.sceneview.ar.arcore.ArFrame
-import io.github.sceneview.ar.arcore.LightEstimationMode
-import io.github.sceneview.ar.arcore.planeFindingEnabled
-import io.github.sceneview.ar.arcore.position
+import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
 import io.github.sceneview.math.Position
@@ -64,6 +56,8 @@ class AugmentedRealityFragment : Fragment() {
 
     private lateinit var sceneView: ArSceneView
 
+    private var earth: Earth? = null
+
     private var modelMap: EnumMap<ModelName, Renderable> = EnumMap(ModelName::class.java)
     private lateinit var anchorHostingCircle: AnchorHostingPoint
     private var placementNode: ArModelNode? = null
@@ -83,6 +77,7 @@ class AugmentedRealityFragment : Fragment() {
     private var floorPlan: FloorPlan? = null
 
     private var lastMappingPosition = Position(0f, 0f, 0f)
+    private var initialGeoPose: GeoPose? = null
     private var newAnchorText: String = ""
 
 
@@ -119,6 +114,14 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun onArFrame(frame: ArFrame) {
+        earth?.let {
+            if (it.trackingState == TrackingState.TRACKING) {
+                onArFrameWithEarthTracking(it)
+            }
+        } ?: run {
+            earth = sceneView.arSession?.earth
+            Log.d("O_O", "Geospatial API initialized and earth object assigned")
+        }
         when (arState) {
             NOT_INITIALIZED -> {
                 if (frame.isTrackingPlane) {
@@ -150,6 +153,10 @@ class AugmentedRealityFragment : Fragment() {
             }
             else -> {} //NOOP
         }
+    }
+
+    private fun onArFrameWithEarthTracking(earth: Earth) {
+        binding.arGeospatialAccuracyView.updateView(earth.cameraGeospatialPose)
     }
 
     private fun initializeUIElements() {
@@ -191,6 +198,7 @@ class AugmentedRealityFragment : Fragment() {
                     isVisible = false
                     setModel(modelMap[AXIS])
                     anchor = placementNode.createAnchor()
+                    calculateGeoPoseOfPlacementNode()
                     resetPlacementNode()
                 }
             } else {
@@ -208,7 +216,6 @@ class AugmentedRealityFragment : Fragment() {
                             updateState(PLACE_ANCHOR)
                         }
                     }
-
                 }
             }
         } ?: run {
@@ -262,8 +269,14 @@ class AugmentedRealityFragment : Fragment() {
                     if (success) {
                         updateState(MAPPING)
                         anchorNode.isVisible = true
-                        //TODO include geospatial localization
-                        floorPlan = FloorPlan(CloudAnchor("initial", anchor.cloudAnchorId, 52.0, 13.0, 70.0, 0.0, SerializableQuaternion(anchorNode.quaternion)))
+
+                        initialGeoPose?.let {
+                            floorPlan = FloorPlan(CloudAnchor("initial", anchor.cloudAnchorId, it, SerializableQuaternion(anchorNode.quaternion)))
+                        } ?: run {
+                            Log.e("O_O", "hostCloudAnchor: initialGeoPose is null")
+                            Toast.makeText(requireContext(), "Could not create floor plan with geoPose, since initialGeoPose is null", Toast.LENGTH_SHORT).show()
+                            floorPlan = FloorPlan(CloudAnchor("initial", anchor.cloudAnchorId, 0.0, 0.0, 0.0, 0.0, SerializableQuaternion(anchorNode.quaternion)))
+                        }
                         isInitialAnchorPlaced = true
                         Log.d("O_O", "Cloud anchor hosted successfully")
                     } else {
@@ -283,6 +296,27 @@ class AugmentedRealityFragment : Fragment() {
                     } else {
                         onHostingFailed()
                     }
+                }
+            }
+        }
+    }
+
+    private fun calculateGeoPoseOfPlacementNode() {
+        earth?.cameraGeospatialPose?.let { geospatialPose ->
+            placementNode?.let { pNode ->
+                pNode.pose?.let { pose ->
+                    val vectorUp = pose.yDirection
+
+                    val cameraTransform = sceneView.camera.transform
+                    val cameraPosition = cameraTransform.position
+                    val cameraOnPlaneOfPlacementNode = cameraPosition.minus(vectorUp.times((cameraPosition.minus(pNode.position)).times(vectorUp)))
+                    val distanceOfCameraToGround = (cameraPosition.minus(cameraOnPlaneOfPlacementNode)).toVector3().length()
+
+                    val distanceToPlacementNode = ((pNode.position.minus(cameraOnPlaneOfPlacementNode)).toVector3().length()) / 1000 // divided by 1000, because in km
+
+                    val latLng = GeoUtils.getLatLngByDistanceAndBearing(geospatialPose.latitude, geospatialPose.longitude, geospatialPose.heading, distanceToPlacementNode.toDouble())
+
+                    initialGeoPose = GeoPose(latLng.latitude, latLng.longitude, geospatialPose.altitude - distanceOfCameraToGround, geospatialPose.heading)
                 }
             }
         }

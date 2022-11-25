@@ -4,6 +4,14 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <de.morhenn.ar_localization.ar.GeospatialAccuracyView
+        android:id="@+id/ar_geospatial_accuracy_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:elevation="4dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <io.github.sceneview.ar.ArSceneView
         android:id="@+id/sceneView"
         android:layout_width="match_parent"
@@ -11,7 +19,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/ar_geospatial_accuracy_view" />
 
     <ProgressBar
         android:id="@+id/ar_progress_bar"

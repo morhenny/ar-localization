@@ -10,8 +10,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.morhenn.ar_localization.R
-import de.morhenn.ar_localization.ar.ArState
-import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
 import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
 

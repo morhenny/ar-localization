@@ -24,4 +24,7 @@ data class CloudAnchor(
 
     constructor(text: String, cloudAnchorId: String, lat: Double, lng: Double, alt: Double, compassHeading: Double, quaternion: SerializableQuaternion) :
             this(text, cloudAnchorId, lat, lng, alt, compassHeading, 0.0f, 0.0f, 0.0f, quaternion)
+
+    constructor(text: String, cloudAnchorId: String, geoPose: GeoPose, quaternion: SerializableQuaternion) :
+            this(text, cloudAnchorId, geoPose.latitude, geoPose.longitude, geoPose.altitude, geoPose.heading, 0.0f, 0.0f, 0.0f, quaternion)
 }
