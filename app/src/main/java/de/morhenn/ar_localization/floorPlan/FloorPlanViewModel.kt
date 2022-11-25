@@ -10,6 +10,9 @@ class FloorPlanViewModel : ViewModel() {
     val floorPlanList: ArrayList<FloorPlan> = ArrayList()
     val listAdapter = FloorPlanListAdapter(floorPlanList)
 
+    var nameForNewFloorPlan = ""
+    var infoForNewFloorPlan = ""
+
     init {
         loadDebugFloorPlan()
     }

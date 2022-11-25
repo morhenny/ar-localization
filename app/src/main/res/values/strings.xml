@@ -9,8 +9,13 @@
     <string name="new_anchor_dialog_input_hint">Location description (ex. Room-Number)</string>
     <string name="new_anchor_dialog_title">Add new Cloud Anchor</string>
     <string name="new_anchor_dialog_info">Enter a name for the cloud anchor \nThis can be used to search while localizing</string>
-    <string name="new_anchor_dialog_button_confirm">Confirm</string>
-    <string name="new_anchor_dialog_button_cancel">Cancel</string>
+    <string name="dialog_button_confirm">Confirm</string>
+    <string name="dialog_button_cancel">Cancel</string>
     <string name="dialog_new_anchor_text_error">Please enter a text first!</string>
+    <string name="new_floor_plan_dialog_title">Create a new Floor Plan</string>
+    <string name="new_floor_plan_dialog_info">Set the name and description for the new floor plan</string>
+    <string name="new_floor_plan_dialog_input_name_hint">Name of the floor plan</string>
+    <string name="new_floor_plan_dialog_input_info_hint">Additional info of the floor plan</string>
+    <string name="dialog_new_floor_plan_error">Please enter a name first</string>
 
 </resources>

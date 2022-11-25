@@ -1,5 +1,6 @@
 package de.morhenn.ar_localization.floorPlan
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,6 +10,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import de.morhenn.ar_localization.R
+import de.morhenn.ar_localization.ar.ArState
+import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
+import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
 
 class FloorPlanListFragment : Fragment() {
@@ -32,8 +36,28 @@ class FloorPlanListFragment : Fragment() {
         binding.floorPlanList.adapter = viewModelFloorPlan.listAdapter
 
         binding.fabFloorPlanList.setOnClickListener {
-            findNavController().navigate(FloorPlanListFragmentDirections.actionFloorPlanListFragmentToAugmentedRealityFragment())
+            showDialogToCreate()
         }
 
+    }
+
+    private fun showDialogToCreate() {
+        val dialogBinding = DialogNewFloorPlanBinding.inflate(LayoutInflater.from(requireContext()))
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setView(dialogBinding.root)
+        val dialog = builder.show()
+        dialogBinding.dialogNewFloorPlanButtonConfirm.setOnClickListener {
+            if (dialogBinding.dialogNewAnchorInputName.text.toString().isNotEmpty()) {
+                viewModelFloorPlan.nameForNewFloorPlan = dialogBinding.dialogNewAnchorInputName.text.toString()
+                viewModelFloorPlan.infoForNewFloorPlan = dialogBinding.dialogNewAnchorInputInfo.text.toString()
+                dialog.dismiss()
+                findNavController().navigate(FloorPlanListFragmentDirections.actionFloorPlanListFragmentToAugmentedRealityFragment())
+            } else {
+                dialogBinding.dialogNewFloorPlanInputNameLayout.error = getString(R.string.dialog_new_floor_plan_error)
+            }
+        }
+        dialogBinding.dialogNewFloorPlanButtonCancel.setOnClickListener {
+            dialog.cancel()
+        }
     }
 }

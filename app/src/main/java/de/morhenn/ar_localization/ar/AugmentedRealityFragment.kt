@@ -217,10 +217,9 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun onConfirmClicked() {
-        //TODO ask the user for name and info of the floorplan
         floorPlan?.let {
-            it.name = "Freshly created floorplan"
-            it.info = "Some information"
+            it.name = viewModelFloorPlan.nameForNewFloorPlan
+            it.info = viewModelFloorPlan.infoForNewFloorPlan
             addRemainingMappingPointsToFloorPlan()
             viewModelFloorPlan.floorPlanList.add(it)
             findNavController().popBackStack()
