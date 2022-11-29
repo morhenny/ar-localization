@@ -37,6 +37,7 @@ import io.github.sceneview.math.toVector3
 import io.github.sceneview.model.await
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.*
 
 class AugmentedRealityFragment : Fragment() {
@@ -224,15 +225,20 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun onConfirmClicked() {
-        floorPlan?.let {
-            it.name = viewModelFloorPlan.nameForNewFloorPlan
-            it.info = viewModelFloorPlan.infoForNewFloorPlan
-            addRemainingMappingPointsToFloorPlan()
-            viewModelFloorPlan.floorPlanList.add(it)
-            findNavController().popBackStack()
-        } ?: run {
-            Toast.makeText(requireContext(), "No floor plan created yet, cannot confirm", Toast.LENGTH_SHORT).show()
-            Log.e("O_O", "onConfirmClicked: floorPlan is null")
+        binding.arProgressBar.visibility = View.VISIBLE
+        lifecycleScope.launch(Dispatchers.IO) {
+            floorPlan?.let {
+                it.name = viewModelFloorPlan.nameForNewFloorPlan
+                it.info = viewModelFloorPlan.infoForNewFloorPlan
+                addRemainingMappingPointsToFloorPlan()
+                viewModelFloorPlan.floorPlanList.add(it)
+                withContext(Dispatchers.Main) {
+                    findNavController().popBackStack()
+                }
+            } ?: run {
+                Toast.makeText(requireContext(), "No floor plan created yet, cannot confirm", Toast.LENGTH_SHORT).show()
+                Log.e("O_O", "onConfirmClicked: floorPlan is null")
+            }
         }
     }
 

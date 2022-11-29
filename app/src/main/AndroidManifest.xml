@@ -21,6 +21,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Arlocalization"
         tools:targetApi="31">
+
+        <!-- The API key for the Google Maps API is defined in local.properties.-->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${GOOGLE_MAPS_API_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
