@@ -17,13 +17,24 @@ class FloorPlanViewModel : ViewModel() {
     }
 
     private fun loadDebugFloorPlan() {
-        val mainCloudAnchor = CloudAnchor("main", "noRealID", 52.0, 13.0, 80.222, 0.0)
+        val mainCloudAnchor = CloudAnchor("main", "ua-fc9d89819f61fa990a619445d3248def", 52.5123785, 13.3262760, 70.318, 157.51)
         val floorPlan = FloorPlan(
             "Debug Floor Plan",
-            "This is a debug floor plan. It is used for testing purposes only.",
+            "TU Seiteneingang zu Raum 0112",
             mainCloudAnchor,
-            mutableListOf(MappingPoint(100f, 100f, 100f), MappingPoint(200f, 100f, -200f), MappingPoint(300f, 100f, -300f)),
-            mutableListOf(CloudAnchor("first", "noRealID", 52.01, 13.01, 80.0, 0.0))
+            mutableListOf(
+                MappingPoint(0.8f, 0f, -0.9f),
+                MappingPoint(3.16f, 0f, -4.1f),
+                MappingPoint(4.347f, 0f, -6.44f),
+                MappingPoint(5.35f, 0f, -8.75f),
+                MappingPoint(6.97f, 0f, -12.80f),
+                MappingPoint(8.76f, 0f, -16.55f),
+                MappingPoint(10.596f, 0f, -21.11f),
+                MappingPoint(13.20f, 0f, -20.346f),
+                MappingPoint(16.467f, 0f, -19.152f),
+                MappingPoint(19.588f, 0f, -18.082f),
+                MappingPoint(24.010f, 0f, -16.544f)),
+            mutableListOf(CloudAnchor("first", "noRealID", 52.5120557, 13.325830, 70.318, 157.51))
         )
         floorPlanList.add(floorPlan)
     }

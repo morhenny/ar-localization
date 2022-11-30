@@ -208,12 +208,17 @@ class AugmentedRealityFragment : Fragment() {
                         parent = sceneView
                         isVisible = false
                         setModel(modelMap[AXIS])
-                        val anchorPose = Pose(placementNode.pose?.translation, initialAnchorNode.quaternion.toFloatArray())
-                        placementNode.lastHitResult?.let {
-                            anchor = it.trackable.createAnchor(anchorPose)
-                            resetPlacementNode()
+                        placementNode.pose?.let {
+                            val anchorPose = Pose(placementNode.pose?.translation, initialAnchorNode.quaternion.toFloatArray())
+                            placementNode.lastHitResult?.let {
+                                anchor = it.trackable.createAnchor(anchorPose)
+                                resetPlacementNode()
+                            } ?: run {
+                                Log.e("O_O", "lastHitResult is null, no anchor created for trackingAnchorNode")
+                                updateState(PLACE_ANCHOR)
+                            }
                         } ?: run {
-                            Log.e("O_O", "lastHitResult is null, no anchor created for trackingAnchorNode")
+                            Log.e("O_O", "Pose is null, cannot place trackingNode")
                             updateState(PLACE_ANCHOR)
                         }
                     }
