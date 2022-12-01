@@ -47,6 +47,8 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
     private lateinit var recyclerView: RecyclerView
     private lateinit var layoutManager: LinearLayoutManager
 
+    private var currentFloorPlans = listOf<FloorPlan>()
+
     private var map: GoogleMap? = null
 
     private var waitingOnInitialMapLoad = true
@@ -63,13 +65,22 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         recyclerView = binding.floorPlanList
         layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
-        listAdapter = FloorPlanListAdapter(viewModelFloorPlan.floorPlanList, viewModelFloorPlan)
-        binding.floorPlanList.adapter = listAdapter
+        listAdapter = FloorPlanListAdapter()
+
+        viewModelFloorPlan.floorPlans.observe(viewLifecycleOwner) {
+            listAdapter.submitList(it)
+            currentFloorPlans = it
+        }
+        recyclerView.adapter = listAdapter
 
         requestLocationPermission()
 
         binding.fabFloorPlanList.setOnClickListener {
             showDialogToCreate()
+        }
+
+        listAdapter.deleteSelectedFloorPlan.observe(viewLifecycleOwner) {
+            viewModelFloorPlan.removeFloorPlan(currentFloorPlans[listAdapter.expandedPosition])
         }
     }
 
@@ -80,7 +91,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             mapType = GoogleMap.MAP_TYPE_NORMAL
             setOnMapLoadedCallback {
                 if (waitingOnInitialMapLoad) {
-                    showFloorPlanOnMap(viewModelFloorPlan.floorPlanList[listAdapter.expandedPosition])
+                    showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
                     waitingOnInitialMapLoad = false
                 }
             }
@@ -104,10 +115,10 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                     binding.floorPlanMap.visibility = View.VISIBLE
                     layoutManager.scrollToPositionWithOffset(pos, 150)
                     if (!waitingOnInitialMapLoad) {
-                        showFloorPlanOnMap(viewModelFloorPlan.floorPlanList[listAdapter.expandedPosition])
+                        showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
                     }
                 } else {
-                    showFloorPlanOnMap(viewModelFloorPlan.floorPlanList[listAdapter.expandedPosition])
+                    showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
                 }
             }
         }

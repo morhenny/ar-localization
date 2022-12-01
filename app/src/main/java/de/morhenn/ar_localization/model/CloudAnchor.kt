@@ -1,23 +1,20 @@
 package de.morhenn.ar_localization.model
 
-import kotlinx.serialization.Serializable
-
-@Serializable
 data class CloudAnchor(
-    var text: String, //description to search by
-    var cloudAnchorId: String,
+    var text: String = "", //description to search by
+    var cloudAnchorId: String = "",
 
     //geo position of the anchor
-    var lat: Double,
-    var lng: Double,
-    var alt: Double,
-    var compassHeading: Double,
+    var lat: Double = 0.0,
+    var lng: Double = 0.0,
+    var alt: Double = 0.0,
+    var compassHeading: Double = 0.0,
 
     //relative position of the anchor to current main anchor
-    var xToMain: Float,
-    var yToMain: Float,
-    var zToMain: Float,
-    var relativeQuaternion: SerializableQuaternion, //TODO use quaternion or euler angles, or constrain to always the main anchors rotation?
+    var xToMain: Float = 0.0f,
+    var yToMain: Float = 0.0f,
+    var zToMain: Float = 0.0f,
+    var relativeQuaternion: SerializableQuaternion = SerializableQuaternion(),
 ) {
     constructor(text: String, cloudAnchorId: String, lat: Double, lng: Double, alt: Double, compassHeading: Double) :
             this(text, cloudAnchorId, lat, lng, alt, compassHeading, 0.0f, 0.0f, 0.0f, SerializableQuaternion())

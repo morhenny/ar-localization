@@ -1,19 +1,45 @@
 package de.morhenn.ar_localization.floorPlan
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import de.morhenn.ar_localization.firebase.FirebaseFloorPlanService
 import de.morhenn.ar_localization.model.CloudAnchor
 import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.model.MappingPoint
+import kotlinx.coroutines.launch
 
 class FloorPlanViewModel : ViewModel() {
-
-    val floorPlanList: ArrayList<FloorPlan> = ArrayList()
 
     var nameForNewFloorPlan = ""
     var infoForNewFloorPlan = ""
 
+    private val _floorPlans = MutableLiveData<List<FloorPlan>>()
+    val floorPlans: LiveData<List<FloorPlan>>
+        get() = _floorPlans
+
     init {
-        loadDebugFloorPlan()
+        viewModelScope.launch {
+            FirebaseFloorPlanService.registerForFloorPlanUpdates().collect {
+                _floorPlans.value = it
+            }
+        }
+    }
+
+    //TODO might not even be needed, due to updateListener
+    fun refreshFloorPlanList() {
+        viewModelScope.launch {
+            _floorPlans.value = FirebaseFloorPlanService.getFloorPlanList()
+        }
+    }
+
+    fun addFloorPlan(floorPlan: FloorPlan) {
+        FirebaseFloorPlanService.addFloorPlan(floorPlan)
+    }
+
+    fun removeFloorPlan(floorPlan: FloorPlan) {
+        FirebaseFloorPlanService.deleteFloorPlan(floorPlan)
     }
 
     private fun loadDebugFloorPlan() {
@@ -36,6 +62,6 @@ class FloorPlanViewModel : ViewModel() {
                 MappingPoint(24.010f, 0f, -16.544f)),
             mutableListOf(CloudAnchor("first", "noRealID", 52.5120557, 13.325830, 70.318, 157.51))
         )
-        floorPlanList.add(floorPlan)
+        addFloorPlan(floorPlan)
     }
 }

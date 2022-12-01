@@ -6,13 +6,15 @@ import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import de.morhenn.ar_localization.R
 import de.morhenn.ar_localization.databinding.ItemFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.utils.SimpleEvent
 
-class FloorPlanListAdapter(private val floorPlanList: List<FloorPlan>, private val viewModel: FloorPlanViewModel) : RecyclerView.Adapter<FloorPlanListAdapter.ViewHolder>() {
+class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewHolder>(FloorPlanDiffCallback) {
 
     var expandedPosition = -1
 
@@ -20,13 +22,17 @@ class FloorPlanListAdapter(private val floorPlanList: List<FloorPlan>, private v
     val selectedFloorPlanChanged: LiveData<SimpleEvent>
         get() = _selectedFloorPlanChanged
 
+    private val _deleteSelectedFloorPlan = MutableLiveData<SimpleEvent>()
+    val deleteSelectedFloorPlan: LiveData<SimpleEvent>
+        get() = _deleteSelectedFloorPlan
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFloorPlanListBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return ViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(floorPlanList[position], position)
+        holder.bind(getItem(position))
         if (position == expandedPosition) {
             holder.expandArea.visibility = View.VISIBLE
             holder.expandIcon.setImageDrawable(ContextCompat.getDrawable(holder.itemView.context, R.drawable.ic_baseline_arrow_drop_up_24))
@@ -39,17 +45,15 @@ class FloorPlanListAdapter(private val floorPlanList: List<FloorPlan>, private v
             expandedPosition = if (lastPos == position) {
                 -1
             } else position
-
             _selectedFloorPlanChanged.value = SimpleEvent()
-
             if (lastPos >= 0) notifyItemChanged(lastPos)
-
             notifyItemChanged(position)
         }
-    }
-
-    override fun getItemCount(): Int {
-        return floorPlanList.size
+        holder.buttonDelete.setOnClickListener {
+            _deleteSelectedFloorPlan.value = SimpleEvent()
+            expandedPosition = -1
+            _selectedFloorPlanChanged.value = SimpleEvent()
+        }
     }
 
     class ViewHolder(private val binding: ItemFloorPlanListBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -57,8 +61,9 @@ class FloorPlanListAdapter(private val floorPlanList: List<FloorPlan>, private v
         val listItem = binding.floorPlanListItem
         val expandIcon = binding.floorPlanListItemExpandIcon
         val expandArea = binding.floorPlanListItemExpandArea
+        val buttonDelete = binding.floorPlanListItemDeleteButton
 
-        fun bind(floorPlan: FloorPlan, position: Int) {
+        fun bind(floorPlan: FloorPlan) {
             binding.floorPlanListItemName.text = floorPlan.name
             binding.floorPlanListItemInfo.text = floorPlan.info
             binding.floorPlanListItemCoordinates.text = buildString {
@@ -67,7 +72,7 @@ class FloorPlanListAdapter(private val floorPlanList: List<FloorPlan>, private v
                 append(", ")
                 append(String.format("%.6f", floorPlan.mainAnchor.lng))
                 append(" at ")
-                append(String.format("%.2f",floorPlan.mainAnchor.alt))
+                append(String.format("%.2f", floorPlan.mainAnchor.alt))
                 append("m")
             }
             binding.floorPlanListItemAnchorCount.text = buildString {
@@ -81,4 +86,13 @@ class FloorPlanListAdapter(private val floorPlanList: List<FloorPlan>, private v
         }
     }
 
+    object FloorPlanDiffCallback : DiffUtil.ItemCallback<FloorPlan>() {
+        override fun areItemsTheSame(oldItem: FloorPlan, newItem: FloorPlan): Boolean {
+            return oldItem.mainAnchor.cloudAnchorId == newItem.mainAnchor.cloudAnchorId
+        }
+
+        override fun areContentsTheSame(oldItem: FloorPlan, newItem: FloorPlan): Boolean {
+            return oldItem == newItem
+        }
+    }
 }

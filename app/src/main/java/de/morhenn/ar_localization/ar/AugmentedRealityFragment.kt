@@ -236,7 +236,7 @@ class AugmentedRealityFragment : Fragment() {
                 it.name = viewModelFloorPlan.nameForNewFloorPlan
                 it.info = viewModelFloorPlan.infoForNewFloorPlan
                 addRemainingMappingPointsToFloorPlan()
-                viewModelFloorPlan.floorPlanList.add(it)
+                viewModelFloorPlan.addFloorPlan(it)
                 withContext(Dispatchers.Main) {
                     findNavController().popBackStack()
                 }
