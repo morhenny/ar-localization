@@ -20,6 +20,10 @@
     <string name="floor_plan_button_update">Update</string>
     <string name="floor_plan_button_localize">Localize</string>
     <string name="floor_plan_button_delete">Delete</string>
+    <string name="terms_of_use_arcore">This application runs on <a href="https://play.google.com/store/apps/details?id=com.google.ar.core">Google Play Services for AR</a> (ARCore), which is provided by Google and governed by the <a href="https://policies.google.com/privacy">Google Privacy Policy.</a></string>
+    <string name="terms_of_use_cloud_anchor">To power this session, Google will process sensor data (e.g. camera and location). <a href="https://support.google.com/ar?p=how-google-play-services-for-ar-handles-your-data">Learn more</a></string>
+    <string name="terms_of_use">Terms of use</string>
 
+    <string name="firebase_web_client_id" translatable="false">897985463940-n826u221dloahnh6s7afgc1evhf1fnnh.apps.googleusercontent.com</string>
 
 </resources>

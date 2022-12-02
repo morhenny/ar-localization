@@ -2,7 +2,7 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph.xml"
-    app:startDestination="@id/floorPlanListFragment">
+    app:startDestination="@id/loginFragment">
 
     <fragment
         android:id="@+id/augmentedRealityFragment"
@@ -13,10 +13,18 @@
     <fragment
         android:id="@+id/floorPlanListFragment"
         android:name="de.morhenn.ar_localization.floorPlan.FloorPlanListFragment"
-        android:label="FloorPlanListFragment" >
+        android:label="FloorPlanListFragment">
         <action
             android:id="@+id/action_floorPlanListFragment_to_augmentedRealityFragment"
             app:destination="@id/augmentedRealityFragment" />
+    </fragment>
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="de.morhenn.ar_localization.LoginFragment"
+        android:label="LoginFragment">
+        <action
+            android:id="@+id/action_loginFragment_to_floorPlanListFragment"
+            app:destination="@id/floorPlanListFragment" />
     </fragment>
 
 </navigation>
