@@ -235,6 +235,7 @@ class AugmentedRealityFragment : Fragment() {
             floorPlan?.let {
                 it.name = viewModelFloorPlan.nameForNewFloorPlan
                 it.info = viewModelFloorPlan.infoForNewFloorPlan
+                it.ownerUID = viewModelFloorPlan.ownerUID
                 addRemainingMappingPointsToFloorPlan()
                 viewModelFloorPlan.addFloorPlan(it)
                 withContext(Dispatchers.Main) {

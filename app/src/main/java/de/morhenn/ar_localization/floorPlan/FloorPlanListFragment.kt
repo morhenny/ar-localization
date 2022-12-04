@@ -28,6 +28,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import de.morhenn.ar_localization.R
 import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
@@ -151,6 +153,8 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun showDialogToCreate() {
+        val user = Firebase.auth.currentUser
+
         val dialogBinding = DialogNewFloorPlanBinding.inflate(LayoutInflater.from(requireContext()))
         val builder = AlertDialog.Builder(requireContext())
         builder.setView(dialogBinding.root)
@@ -161,6 +165,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             if (dialogBinding.dialogNewAnchorInputName.text.toString().isNotEmpty()) {
                 viewModelFloorPlan.nameForNewFloorPlan = dialogBinding.dialogNewAnchorInputName.text.toString()
                 viewModelFloorPlan.infoForNewFloorPlan = dialogBinding.dialogNewAnchorInputInfo.text.toString()
+                viewModelFloorPlan.ownerUID = user?.uid ?: ""
                 navigateFromDialog = true
                 dialog.dismiss()
             } else {

@@ -9,6 +9,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.auth.ktx.auth
+import com.google.firebase.ktx.Firebase
 import de.morhenn.ar_localization.R
 import de.morhenn.ar_localization.databinding.ItemFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
@@ -49,6 +51,14 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
             if (lastPos >= 0) notifyItemChanged(lastPos)
             notifyItemChanged(position)
         }
+        Firebase.auth.currentUser?.let {
+            with((it.uid == getItem(position).ownerUID)) {
+                holder.buttonDelete.visibility = if (this) View.VISIBLE else View.GONE
+                holder.buttonUpdate.visibility = if (this) View.VISIBLE else View.GONE
+                holder.textOwner.visibility = if (this) View.VISIBLE else View.GONE
+            }
+        }
+
         holder.buttonDelete.setOnClickListener {
             _deleteSelectedFloorPlan.value = SimpleEvent()
             expandedPosition = -1
@@ -62,6 +72,9 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
         val expandIcon = binding.floorPlanListItemExpandIcon
         val expandArea = binding.floorPlanListItemExpandArea
         val buttonDelete = binding.floorPlanListItemDeleteButton
+        val buttonUpdate = binding.floorPlanListItemUpdateButton
+        val buttonLocalize = binding.floorPlanListItemLocalizeButton
+        val textOwner = binding.floorPlanListItemOwner
 
         fun bind(floorPlan: FloorPlan) {
             binding.floorPlanListItemName.text = floorPlan.name

@@ -51,13 +51,25 @@
             card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_info">
 
             <com.google.android.material.textview.MaterialTextView
+                android:id="@+id/floor_plan_list_item_owner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="@string/floorPlan_list_item_owner"
+                android:textColor="@android:color/holo_green_dark"
+                android:textStyle="bold"
+                card_view:layout_constraintLeft_toLeftOf="parent"
+                card_view:layout_constraintRight_toRightOf="parent"
+                card_view:layout_constraintTop_toTopOf="parent" />
+
+            <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/floor_plan_list_item_coordinates"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 card_view:layout_constraintLeft_toLeftOf="parent"
-                card_view:layout_constraintRight_toLeftOf="@id/floor_plan_list_item_delete_button"
-                card_view:layout_constraintTop_toTopOf="parent" />
+                card_view:layout_constraintRight_toRightOf="parent"
+                card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_owner" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/floor_plan_list_item_anchor_count"
@@ -65,7 +77,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 card_view:layout_constraintLeft_toLeftOf="parent"
-                card_view:layout_constraintRight_toLeftOf="@id/floor_plan_list_item_delete_button"
+                card_view:layout_constraintRight_toRightOf="parent"
                 card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_coordinates" />
 
             <com.google.android.material.textview.MaterialTextView
@@ -74,33 +86,45 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 card_view:layout_constraintLeft_toLeftOf="parent"
-                card_view:layout_constraintRight_toLeftOf="@id/floor_plan_list_item_delete_button"
+                card_view:layout_constraintRight_toRightOf="parent"
                 card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_anchor_count" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/floor_plan_list_item_delete_button"
-                android:layout_width="120dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
                 android:text="@string/floor_plan_button_delete"
-                card_view:layout_constraintRight_toRightOf="parent"
-                card_view:layout_constraintTop_toTopOf="parent" />
+                card_view:icon="@drawable/ic_baseline_delete_24"
+                card_view:iconGravity="textStart"
+                card_view:layout_constraintBottom_toBottomOf="parent"
+                card_view:layout_constraintLeft_toLeftOf="parent"
+                card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_mapping_point_count" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/floor_plan_list_item_update_button"
-                android:layout_width="120dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
                 android:text="@string/floor_plan_button_update"
-                card_view:layout_constraintRight_toRightOf="parent"
-                card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_delete_button" />
+                card_view:icon="@drawable/ic_baseline_edit_24"
+                card_view:iconGravity="textStart"
+                card_view:layout_constraintBottom_toBottomOf="parent"
+                card_view:layout_constraintLeft_toRightOf="@id/floor_plan_list_item_delete_button"
+                card_view:layout_constraintRight_toLeftOf="@id/floor_plan_list_item_localize_button"
+                card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_mapping_point_count" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/floor_plan_list_item_localize_button"
-                android:layout_width="120dp"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
                 android:text="@string/floor_plan_button_localize"
+                card_view:icon="@drawable/ic_baseline_travel_explore_24"
+                card_view:iconGravity="textStart"
                 card_view:layout_constraintBottom_toBottomOf="parent"
                 card_view:layout_constraintRight_toRightOf="parent"
-                card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_update_button" />
+                card_view:layout_constraintTop_toBottomOf="@id/floor_plan_list_item_mapping_point_count" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>

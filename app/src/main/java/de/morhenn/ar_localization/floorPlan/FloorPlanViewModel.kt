@@ -14,6 +14,7 @@ class FloorPlanViewModel : ViewModel() {
 
     var nameForNewFloorPlan = ""
     var infoForNewFloorPlan = ""
+    var ownerUID = ""
 
     private val _floorPlans = MutableLiveData<List<FloorPlan>>()
     val floorPlans: LiveData<List<FloorPlan>>
@@ -47,6 +48,7 @@ class FloorPlanViewModel : ViewModel() {
         val floorPlan = FloorPlan(
             "Debug Floor Plan",
             "TU Seiteneingang zu Raum 0112",
+            "",
             mainCloudAnchor,
             mutableListOf(
                 MappingPoint(0.8f, 0f, -0.9f),

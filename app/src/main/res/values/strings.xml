@@ -25,5 +25,6 @@
     <string name="terms_of_use">Terms of use</string>
 
     <string name="firebase_web_client_id" translatable="false">897985463940-n826u221dloahnh6s7afgc1evhf1fnnh.apps.googleusercontent.com</string>
+    <string name="floorPlan_list_item_owner">Owner ✓</string>
 
 </resources>
