@@ -1,5 +1,6 @@
 package de.morhenn.ar_localization.floorPlan
 
+import android.location.Location
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -19,6 +20,8 @@ import de.morhenn.ar_localization.utils.SimpleEvent
 class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewHolder>(FloorPlanDiffCallback) {
 
     var expandedPosition = -1
+
+    var currentLocation: Location? = null
 
     private val _selectedFloorPlanChanged = MutableLiveData<SimpleEvent>()
     val selectedFloorPlanChanged: LiveData<SimpleEvent>
@@ -59,11 +62,23 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
             }
         }
 
+        currentLocation?.let {
+            val loc = Location("")
+            loc.latitude = getItem(position).mainAnchor.lat
+            loc.longitude = getItem(position).mainAnchor.lng
+            holder.textDistance.text = String.format("%.2f m", it.distanceTo(loc))
+        }
+
         holder.buttonDelete.setOnClickListener {
             _deleteSelectedFloorPlan.value = SimpleEvent()
             expandedPosition = -1
             _selectedFloorPlanChanged.value = SimpleEvent()
         }
+    }
+
+    fun updateCurrentLocation(location: Location) {
+        currentLocation = location
+        notifyItemRangeChanged(0, itemCount)
     }
 
     class ViewHolder(private val binding: ItemFloorPlanListBinding) : RecyclerView.ViewHolder(binding.root) {
@@ -75,6 +90,7 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
         val buttonUpdate = binding.floorPlanListItemUpdateButton
         val buttonLocalize = binding.floorPlanListItemLocalizeButton
         val textOwner = binding.floorPlanListItemOwner
+        val textDistance = binding.floorPlanListItemDistance
 
         fun bind(floorPlan: FloorPlan) {
             binding.floorPlanListItemName.text = floorPlan.name

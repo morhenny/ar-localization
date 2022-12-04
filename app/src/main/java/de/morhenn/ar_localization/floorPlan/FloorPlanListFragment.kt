@@ -1,11 +1,13 @@
 package de.morhenn.ar_localization.floorPlan
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Bundle
+import android.os.Looper
 import android.transition.Slide
 import android.transition.TransitionManager
 import android.view.LayoutInflater
@@ -20,6 +22,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -55,9 +58,29 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
 
     private var waitingOnInitialMapLoad = true
 
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private var requestingLocationUpdates = false
+    private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 5000).build()
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            locationResult.lastLocation?.let { newLocation ->
+                listAdapter.currentLocation?.let { lastLocation ->
+                    if (lastLocation.distanceTo(newLocation) > 1f) {
+                        listAdapter.updateCurrentLocation(newLocation)
+                    }
+                } ?: run {
+                    listAdapter.updateCurrentLocation(newLocation)
+                }
+            }
+        }
+    }
+
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFloorPlanListBinding.inflate(inflater, container, false)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         return binding.root
     }
@@ -74,6 +97,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             currentFloorPlans = it
         }
         recyclerView.adapter = listAdapter
+        recyclerView.itemAnimator?.changeDuration = 0
 
         requestLocationPermission()
 
@@ -86,14 +110,16 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
+    @SuppressLint("MissingPermission") //due to android studio lint bug
     override fun onMapReady(googleMap: GoogleMap) {
         map = googleMap.apply {
-            uiSettings.isMyLocationButtonEnabled = false
+            isMyLocationEnabled = true
             isIndoorEnabled = true
             mapType = GoogleMap.MAP_TYPE_NORMAL
             setOnMapLoadedCallback {
                 if (waitingOnInitialMapLoad) {
-                    showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
+                    if (listAdapter.expandedPosition != -1)
+                        showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
                     waitingOnInitialMapLoad = false
                 }
             }
@@ -202,6 +228,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
                 (childFragmentManager.findFragmentById(R.id.floor_plan_map) as SupportMapFragment).getMapAsync(this)
+                startLocationUpdates()
             } else {
                 Toast.makeText(requireContext(), "The app requires location permission to function, please enable them", Toast.LENGTH_LONG).show()
             }
@@ -215,7 +242,30 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             }
             else -> {
                 (childFragmentManager.findFragmentById(R.id.floor_plan_map) as SupportMapFragment).getMapAsync(this)
+                startLocationUpdates()
             }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        requestingLocationUpdates = true
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopLocationUpdates()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (requestingLocationUpdates) {
+            startLocationUpdates()
         }
     }
 
