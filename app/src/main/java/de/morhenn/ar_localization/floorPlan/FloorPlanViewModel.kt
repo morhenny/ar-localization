@@ -1,5 +1,6 @@
 package de.morhenn.ar_localization.floorPlan
 
+import android.location.Location
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -16,6 +17,11 @@ class FloorPlanViewModel : ViewModel() {
     var infoForNewFloorPlan = ""
     var ownerUID = ""
 
+    private var currentFilter = ""
+    private var unfilteredList = listOf<FloorPlan>()
+
+    var lastLocation: Location? = null
+
     private val _floorPlans = MutableLiveData<List<FloorPlan>>()
     val floorPlans: LiveData<List<FloorPlan>>
         get() = _floorPlans
@@ -23,12 +29,45 @@ class FloorPlanViewModel : ViewModel() {
     init {
         viewModelScope.launch {
             FirebaseFloorPlanService.registerForFloorPlanUpdates().collect {
-                _floorPlans.value = it
+                unfilteredList = it
+                if (currentFilter.isNotEmpty()) {
+                    filterList(currentFilter)
+                }
+                lastLocation?.let { location ->
+                    sortListByNewLocation(location)
+                } ?: run {
+                    _floorPlans.value = it
+                }
             }
         }
     }
 
-    //TODO might not even be needed, due to updateListener
+    fun sortListByNewLocation(location: Location) {
+        lastLocation = location
+        val sortedList = _floorPlans.value?.sortedBy {
+            val floorPlanLoc = Location("").apply {
+                latitude = it.mainAnchor.lat
+                longitude = it.mainAnchor.lng
+            }
+            floorPlanLoc.distanceTo(location)
+        }
+        sortedList?.let {
+            _floorPlans.value = it
+        }
+    }
+
+    fun filterList(query: String?) {
+        currentFilter = query ?: ""
+        if (currentFilter.isNotEmpty()) {
+            val filteredList = unfilteredList.filter { floorPlan ->
+                floorPlan.name.contains(currentFilter, true) || floorPlan.info.contains(currentFilter, true)
+            }
+            _floorPlans.value = filteredList
+        } else {
+            _floorPlans.value = unfilteredList
+        }
+    }
+
     fun refreshFloorPlanList() {
         viewModelScope.launch {
             _floorPlans.value = FirebaseFloorPlanService.getFloorPlanList()

@@ -10,13 +10,15 @@ import android.os.Bundle
 import android.os.Looper
 import android.transition.Slide
 import android.transition.TransitionManager
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import android.view.WindowManager.LayoutParams
+import android.widget.SearchView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.view.MenuProvider
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
@@ -57,6 +59,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
     private var map: GoogleMap? = null
 
     private var waitingOnInitialMapLoad = true
+    private var sortByLocation = false
 
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
@@ -67,15 +70,16 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             locationResult.lastLocation?.let { newLocation ->
                 listAdapter.currentLocation?.let { lastLocation ->
                     if (lastLocation.distanceTo(newLocation) > 1f) {
+                        if (sortByLocation) viewModelFloorPlan.sortListByNewLocation(newLocation)
                         listAdapter.updateCurrentLocation(newLocation)
                     }
                 } ?: run {
+                    if (sortByLocation) viewModelFloorPlan.sortListByNewLocation(newLocation)
                     listAdapter.updateCurrentLocation(newLocation)
                 }
             }
         }
     }
-
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentFloorPlanListBinding.inflate(inflater, container, false)
@@ -108,6 +112,43 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         listAdapter.deleteSelectedFloorPlan.observe(viewLifecycleOwner) {
             viewModelFloorPlan.removeFloorPlan(currentFloorPlans[listAdapter.expandedPosition])
         }
+
+        initializeMenu()
+    }
+
+    private fun initializeMenu() {
+        requireActivity().addMenuProvider(object : MenuProvider {
+            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                menuInflater.inflate(R.menu.floor_plan_list_menu, menu)
+                val searchView = menu.findItem(R.id.floor_plan_list_search).actionView as SearchView
+                searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                    override fun onQueryTextSubmit(query: String?): Boolean {
+                        viewModelFloorPlan.filterList(query)
+                        return true
+                    }
+
+                    override fun onQueryTextChange(newText: String?): Boolean {
+                        viewModelFloorPlan.filterList(newText)
+                        return true
+                    }
+                })
+            }
+
+            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+                if (menuItem.itemId == R.id.floor_plan_list_sort_by) {
+                    if (sortByLocation) {
+                        viewModelFloorPlan.lastLocation = null
+                        viewModelFloorPlan.refreshFloorPlanList()
+                        sortByLocation = false
+                    } else {
+                        sortByLocation = true
+                        listAdapter.currentLocation?.let { viewModelFloorPlan.sortListByNewLocation(it) }
+                    }
+                    return true
+                }
+                return false
+            }
+        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
     }
 
     @SuppressLint("MissingPermission") //due to android studio lint bug
@@ -184,7 +225,11 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         val dialogBinding = DialogNewFloorPlanBinding.inflate(LayoutInflater.from(requireContext()))
         val builder = AlertDialog.Builder(requireContext())
         builder.setView(dialogBinding.root)
-        val dialog = builder.show()
+        val dialog = builder.create()
+        dialog.window?.setSoftInputMode(LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+
+        dialogBinding.dialogNewAnchorInputName.requestFocus()
 
         var navigateFromDialog = false
         dialogBinding.dialogNewFloorPlanButtonConfirm.setOnClickListener {

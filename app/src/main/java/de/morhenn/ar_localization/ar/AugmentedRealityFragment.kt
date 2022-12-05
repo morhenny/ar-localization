@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager.LayoutParams
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.fragment.app.Fragment
@@ -198,7 +199,7 @@ class AugmentedRealityFragment : Fragment() {
                     parent = sceneView
                     isVisible = false
                     setModel(modelMap[AXIS])
-                    anchor = placementNode.createAnchor()
+                    anchor = placementNode.createAnchor() //TODO monitor how often his causes ARCoreError: Can't attach anchor
                     calculateGeoPoseOfPlacementNode()
                     resetPlacementNode()
                 }
@@ -256,7 +257,10 @@ class AugmentedRealityFragment : Fragment() {
         val dialogBinding = DialogNewAnchorBinding.inflate(LayoutInflater.from(requireContext()))
         val builder = AlertDialog.Builder(requireContext())
         builder.setView(dialogBinding.root)
-        val dialog = builder.show()
+        val dialog = builder.create()
+        dialog.window?.setSoftInputMode(LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+        dialogBinding.dialogNewAnchorInputText.requestFocus()
         dialogBinding.dialogNewAnchorButtonConfirm.setOnClickListener {
             if (dialogBinding.dialogNewAnchorInputText.text.toString().isNotEmpty()) {
                 resetAnchorHostingCircle()

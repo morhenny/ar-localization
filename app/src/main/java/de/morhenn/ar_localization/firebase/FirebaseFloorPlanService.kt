@@ -14,7 +14,7 @@ object FirebaseFloorPlanService {
     fun registerForFloorPlanUpdates(): Flow<List<FloorPlan>> {
         val db = FirebaseFirestore.getInstance()
         return callbackFlow {
-            val listenerRegistration = db.collection("floorPlans").addSnapshotListener { value, error ->
+            val listenerRegistration = db.collection("floorPlans").orderBy("name").addSnapshotListener { value, error ->
                 if (error != null) {
                     Log.w(TAG, "Listen failed.", error)
                     return@addSnapshotListener
@@ -31,7 +31,7 @@ object FirebaseFloorPlanService {
     suspend fun getFloorPlanList(): List<FloorPlan>? {
         val db = FirebaseFirestore.getInstance()
         return try {
-            db.collection("floorPlans").get().await().toObjects(FloorPlan::class.java)
+            db.collection("floorPlans").orderBy("name").get().await().toObjects(FloorPlan::class.java)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting documents: ", e)
             null
