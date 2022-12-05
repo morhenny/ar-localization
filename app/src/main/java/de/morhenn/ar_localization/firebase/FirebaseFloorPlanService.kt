@@ -57,4 +57,15 @@ object FirebaseFloorPlanService {
             Log.e(TAG, "Error deleting floorPlan: ", e)
         }
     }
+
+    fun updateFloorPlan(floorPlan: FloorPlan) {
+        val db = FirebaseFirestore.getInstance()
+        try {
+            db.collection("floorPlans").whereEqualTo("mainAnchor.cloudAnchorId", floorPlan.mainAnchor.cloudAnchorId).get().addOnSuccessListener { result ->
+                result.documents[0].reference.update("name", floorPlan.name, "info", floorPlan.info)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating floorPlan: ", e)
+        }
+    }
 }

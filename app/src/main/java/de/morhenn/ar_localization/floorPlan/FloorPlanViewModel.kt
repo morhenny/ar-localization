@@ -82,6 +82,10 @@ class FloorPlanViewModel : ViewModel() {
         FirebaseFloorPlanService.deleteFloorPlan(floorPlan)
     }
 
+    fun updateFloorPlan(editFloorPlan: FloorPlan) {
+        FirebaseFloorPlanService.updateFloorPlan(editFloorPlan)
+    }
+
     private fun loadDebugFloorPlan() {
         val mainCloudAnchor = CloudAnchor("main", "ua-fc9d89819f61fa990a619445d3248def", 52.5123785, 13.3262760, 70.318, 157.51)
         val floorPlan = FloorPlan(

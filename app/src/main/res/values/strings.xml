@@ -26,5 +26,7 @@
 
     <string name="firebase_web_client_id" translatable="false">897985463940-n826u221dloahnh6s7afgc1evhf1fnnh.apps.googleusercontent.com</string>
     <string name="floorPlan_list_item_owner">Owner ✓</string>
+    <string name="update_floor_plan_dialog_title">Update the Floor Plan</string>
+    <string name="update_floor_plan_dialog_hint">Change name or description of the selected floor plan</string>
 
 </resources>

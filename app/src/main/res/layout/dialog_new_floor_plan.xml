@@ -19,7 +19,7 @@
 
 
     <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/dialog_new_floor_plan_info"
+        android:id="@+id/dialog_new_floor_plan_hint"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
@@ -39,7 +39,7 @@
         app:errorEnabled="true"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/dialog_new_floor_plan_info">
+        app:layout_constraintTop_toBottomOf="@id/dialog_new_floor_plan_hint">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/dialog_new_anchor_input_name"

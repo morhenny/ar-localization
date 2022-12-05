@@ -109,8 +109,16 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             showDialogToCreate()
         }
 
-        listAdapter.deleteSelectedFloorPlan.observe(viewLifecycleOwner) {
-            viewModelFloorPlan.removeFloorPlan(currentFloorPlans[listAdapter.expandedPosition])
+        with(listAdapter) {
+            deleteSelectedFloorPlan.observe(viewLifecycleOwner) {
+                viewModelFloorPlan.removeFloorPlan(currentFloorPlans[listAdapter.expandedPosition])
+            }
+            updateSelectedFloorPlan.observe(viewLifecycleOwner) {
+                showDialogToUpdate()
+            }
+            localizeSelectedFloorPlan.observe(viewLifecycleOwner) {
+                //TODO
+            }
         }
 
         initializeMenu()
@@ -216,6 +224,40 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                 lastPos = pointLatLng
             }
             map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds.build(), 250))
+        }
+    }
+
+    private fun showDialogToUpdate() {
+        val dialogBinding = DialogNewFloorPlanBinding.inflate(LayoutInflater.from(requireContext()))
+        val builder = AlertDialog.Builder(requireContext())
+        builder.setView(dialogBinding.root)
+        val dialog = builder.create()
+        dialog.window?.setSoftInputMode(LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.show()
+
+        val editFloorPlan = currentFloorPlans[listAdapter.expandedPosition]
+        with(dialogBinding) {
+            dialogNewFloorPlanTitle.text = getText(R.string.update_floor_plan_dialog_title)
+            dialogNewFloorPlanHint.text = getText(R.string.update_floor_plan_dialog_hint)
+            dialogNewAnchorInputName.setText(editFloorPlan.name)
+            dialogNewAnchorInputInfo.setText(editFloorPlan.info)
+            dialogNewAnchorInputName.requestFocus()
+        }
+
+        dialogBinding.dialogNewFloorPlanButtonConfirm.setOnClickListener {
+            if (dialogBinding.dialogNewAnchorInputName.text.toString().isNotEmpty()) {
+                editFloorPlan.name = dialogBinding.dialogNewAnchorInputName.text.toString()
+                editFloorPlan.info = dialogBinding.dialogNewAnchorInputInfo.text.toString()
+
+                viewModelFloorPlan.updateFloorPlan(editFloorPlan)
+                listAdapter.notifyItemChanged(listAdapter.expandedPosition)
+                dialog.dismiss()
+            } else {
+                dialogBinding.dialogNewFloorPlanInputNameLayout.error = getString(R.string.dialog_new_floor_plan_error)
+            }
+        }
+        dialogBinding.dialogNewFloorPlanButtonCancel.setOnClickListener {
+            dialog.cancel()
         }
     }
 

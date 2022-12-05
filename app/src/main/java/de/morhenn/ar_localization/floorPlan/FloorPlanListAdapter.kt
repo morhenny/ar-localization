@@ -31,6 +31,14 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
     val deleteSelectedFloorPlan: LiveData<SimpleEvent>
         get() = _deleteSelectedFloorPlan
 
+    private val _updateSelectedFloorPlan = MutableLiveData<SimpleEvent>()
+    val updateSelectedFloorPlan: LiveData<SimpleEvent>
+        get() = _updateSelectedFloorPlan
+
+    private val _localizeSelectedFloorPlan = MutableLiveData<SimpleEvent>()
+    val localizeSelectedFloorPlan: LiveData<SimpleEvent>
+        get() = _localizeSelectedFloorPlan
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFloorPlanListBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return ViewHolder(binding)
@@ -69,10 +77,18 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
             holder.textDistance.text = String.format("%.2f m", it.distanceTo(loc))
         }
 
-        holder.buttonDelete.setOnClickListener {
-            _deleteSelectedFloorPlan.value = SimpleEvent()
-            expandedPosition = -1
-            _selectedFloorPlanChanged.value = SimpleEvent()
+        with(holder) {
+            buttonDelete.setOnClickListener {
+                _deleteSelectedFloorPlan.value = SimpleEvent()
+                expandedPosition = -1
+                _selectedFloorPlanChanged.value = SimpleEvent()
+            }
+            buttonUpdate.setOnClickListener {
+                _updateSelectedFloorPlan.value = SimpleEvent()
+            }
+            buttonLocalize.setOnClickListener {
+                _localizeSelectedFloorPlan.value = SimpleEvent()
+            }
         }
     }
 
