@@ -200,6 +200,9 @@ class AugmentedRealityFragment : Fragment() {
                     isVisible = false
                     setModel(modelMap[AXIS])
                     anchor = placementNode.createAnchor() //TODO monitor how often his causes ARCoreError: Can't attach anchor
+                    anchor?.pose?.let { pose ->
+                        anchorHostingCircle.setPosition(pose)
+                    }
                     calculateGeoPoseOfPlacementNode()
                     resetPlacementNode()
                 }
@@ -213,6 +216,9 @@ class AugmentedRealityFragment : Fragment() {
                             val anchorPose = Pose(placementNode.pose?.translation, initialAnchorNode.quaternion.toFloatArray())
                             placementNode.lastHitResult?.let {
                                 anchor = it.trackable.createAnchor(anchorPose)
+                                anchor?.pose?.let { pose ->
+                                    anchorHostingCircle.setPosition(pose)
+                                }
                                 resetPlacementNode()
                             } ?: run {
                                 Log.e("O_O", "lastHitResult is null, no anchor created for trackingAnchorNode")
@@ -250,7 +256,51 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun onUndoClicked() {
-        TODO("Not yet implemented")
+        if (arState == SCAN_ANCHOR_CIRCLE || arState == HOSTING) {
+            if (isInitialAnchorPlaced) {
+                trackingAnchorNode?.let {
+                    it.detachAnchor()
+                    it.parent = null
+                    it.destroy()
+                }
+                trackingAnchorNode = null
+            } else {
+                initialAnchorNode?.let {
+                    it.detachAnchor()
+                    it.parent = null
+                    it.destroy()
+                }
+                initialAnchorNode = null
+                isInitialAnchorPlaced = false
+            }
+            anchorHostingCircle.destroy()
+            anchorHostingCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
+            updateState(PLACE_ANCHOR)
+        } else if (arState == MAPPING) {
+            if (listOfAnchorNodes.isNotEmpty()) {
+                with(listOfAnchorNodes.last()) {
+                    anchor?.detach()
+                    parent = null
+                    destroy()
+                }
+                listOfAnchorNodes.removeLast()
+            } else {
+                initialAnchorNode?.let {
+                    it.detachAnchor()
+                    it.parent = null
+                    it.destroy()
+                }
+                initialAnchorNode = null
+                isInitialAnchorPlaced = false
+            }
+            anchorHostingCircle.destroy()
+            anchorHostingCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
+            updateState(PLACE_ANCHOR)
+        } else if (arState == PLACE_ANCHOR) {
+            if (isInitialAnchorPlaced) {
+                updateState(MAPPING)
+            }
+        }
     }
 
     private fun onNewAnchorClicked() {
@@ -425,6 +475,11 @@ class AugmentedRealityFragment : Fragment() {
         binding.arFabConfirm.visibility = arState.fabConfirmVisibility
         binding.arProgressBar.visibility = arState.progressBarVisibility
         binding.arExtendedFab.isEnabled = arState.fabEnabled
+        if (arState == PLACE_ANCHOR && initialAnchorNode == null) {
+            binding.arFabUndo.visibility = View.INVISIBLE
+        } else {
+            binding.arFabUndo.visibility = arState.undoVisibility
+        }
         when (arState.fabState) {
             ArFabState.PLACE -> {
                 binding.arExtendedFab.text = getString(R.string.ar_fab_place)

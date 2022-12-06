@@ -1,19 +1,21 @@
 package de.morhenn.ar_localization.ar
 
-import android.view.View
+import android.view.View.INVISIBLE
+import android.view.View.VISIBLE
 
 enum class ArState(
-    val progressBarVisibility: Int = View.INVISIBLE,
+    val progressBarVisibility: Int = INVISIBLE,
     val fabEnabled: Boolean = false,
-    val fabConfirmVisibility: Int = View.INVISIBLE,
+    val fabConfirmVisibility: Int = INVISIBLE,
     val anchorCircleEnabled: Boolean = false,
     val fabState: ArFabState = ArFabState.PLACE,
+    val undoVisibility: Int = INVISIBLE,
 ) {
     NOT_INITIALIZED,
-    PLACE_ANCHOR(fabEnabled = true, anchorCircleEnabled = true, fabState = ArFabState.PLACE),
-    SCAN_ANCHOR_CIRCLE(anchorCircleEnabled = true),
-    HOSTING(progressBarVisibility = View.VISIBLE, anchorCircleEnabled = true, fabState = ArFabState.HOST),
-    MAPPING(fabEnabled = true, fabState = ArFabState.NEW_ANCHOR, fabConfirmVisibility = View.VISIBLE),
+    PLACE_ANCHOR(fabEnabled = true, anchorCircleEnabled = true, undoVisibility = VISIBLE, fabState = ArFabState.PLACE),
+    SCAN_ANCHOR_CIRCLE(anchorCircleEnabled = true, undoVisibility = VISIBLE),
+    HOSTING(progressBarVisibility = VISIBLE, anchorCircleEnabled = true, undoVisibility = VISIBLE, fabState = ArFabState.HOST),
+    MAPPING(fabEnabled = true, undoVisibility = VISIBLE, fabState = ArFabState.NEW_ANCHOR, fabConfirmVisibility = VISIBLE),
 }
 
 enum class ArFabState {

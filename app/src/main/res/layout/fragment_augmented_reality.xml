@@ -41,7 +41,7 @@
         android:layout_margin="10dp"
         android:elevation="2dp"
         android:enabled="false"
-        android:text="Place"
+        android:text="@string/ar_fab_place"
         app:icon="@drawable/ic_place_item_24"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -55,6 +55,7 @@
         android:layout_margin="10dp"
         android:elevation="2dp"
         android:src="@drawable/ic_baseline_undo_24"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent" />
 
