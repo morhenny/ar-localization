@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.ar.core.Config
 import com.google.ar.core.Earth
 import com.google.ar.core.TrackingState
@@ -96,9 +97,24 @@ class ArLocalizingFragment : Fragment() {
         binding.arLocalizingGeospatialAccVie.updateView(earth.cameraGeospatialPose)
     }
 
-
     private fun initializeUIElements() {
-        //TODO
+        val bottomSheetBehavior = BottomSheetBehavior.from(binding.arLocalizingBottomSheet)
+        val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                when (newState) {
+                    BottomSheetBehavior.STATE_COLLAPSED -> {}
+                    BottomSheetBehavior.STATE_HALF_EXPANDED -> {}
+                    BottomSheetBehavior.STATE_EXPANDED -> {}
+                    else -> {} //NO-OP
+                }
+            }
+
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                //TODO
+            }
+        }
+        bottomSheetBehavior.addBottomSheetCallback(bottomSheetCallback)
+        bottomSheetBehavior.saveFlags = BottomSheetBehavior.SAVE_ALL
     }
 
     private suspend fun loadModels() {

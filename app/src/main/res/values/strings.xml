@@ -29,5 +29,6 @@
     <string name="update_floor_plan_dialog_title">Update the Floor Plan</string>
     <string name="update_floor_plan_dialog_hint">Change name or description of the selected floor plan</string>
     <string name="new_anchor_dialog_input_floor_hint">On what floor is the anchor</string>
+    <string name="ar_localize_bottom_sheet_title">Select Cloud Anchor to Localize:</string>
 
 </resources>

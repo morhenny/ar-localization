@@ -11,7 +11,9 @@
         <item name="colorOnSecondary">@color/black</item>
         <!-- Status bar color. -->
         <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+
+        <!-- Bottom Sheet widget style attributes -->
+        <item name="bottomSheetStyle">@style/AppStandardBottomSheet</item>
     </style>
 
     <style name="FloatingActionButtonStyle" parent="Widget.Design.FloatingActionButton">
@@ -21,5 +23,22 @@
     <style name="FabShapeStyle" parent="ShapeAppearance.MaterialComponents.SmallComponent">
         <item name="cornerSize">15%</item>
         <item name="cornerFamily">rounded</item>
+    </style>
+
+    <style name="LargeComponent" parent="ShapeAppearance.MaterialComponents.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">4dp</item>
+    </style>
+
+    <style name="AppStandardBottomSheet">
+        <item name="shapeAppearance">@style/LargeComponent</item>
+        <item name="android:elevation">8dp</item>
+        <item name="behavior_hideable">false</item>
+        <item name="behavior_draggable">true</item>
+        <item name="behavior_skipCollapsed">false</item>
+        <item name="behavior_peekHeight">80dp</item>
+        <item name="behavior_fitToContents">false</item>
+        <item name="behavior_halfExpandedRatio">0.5</item>
+        <item name="behavior_expandedOffset">0dp</item>
     </style>
 </resources>
