@@ -20,10 +20,10 @@ import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ResourceManager
 import de.morhenn.ar_localization.R
-import de.morhenn.ar_localization.ar.ArState.*
+import de.morhenn.ar_localization.ar.ArMappingStates.*
 import de.morhenn.ar_localization.ar.ModelName.*
 import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
-import de.morhenn.ar_localization.databinding.FragmentAugmentedRealityBinding
+import de.morhenn.ar_localization.databinding.FragmentArMappingBinding
 import de.morhenn.ar_localization.floorPlan.FloorPlanViewModel
 import de.morhenn.ar_localization.model.*
 import de.morhenn.ar_localization.utils.GeoUtils
@@ -41,19 +41,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.*
 
-class AugmentedRealityFragment : Fragment() {
+class ArMappingFragment : Fragment() {
 
-    private var arState: ArState = NOT_INITIALIZED
-    private var arMode: ArMode = ArMode.CREATE_FLOOR_PLAN
+    private var arState: ArMappingStates = NOT_INITIALIZED
 
     //state flags
     private var isInitialAnchorPlaced = false
 
     //viewBinding
-    private var _binding: FragmentAugmentedRealityBinding? = null
+    private var _binding: FragmentArMappingBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModelAR: AugmentedRealityViewModel by viewModels()
     private val viewModelFloorPlan: FloorPlanViewModel by navGraphViewModels(R.id.nav_graph_xml)
 
     private lateinit var sceneView: ArSceneView
@@ -81,10 +79,11 @@ class AugmentedRealityFragment : Fragment() {
     private var lastMappingPosition = Position(0f, 0f, 0f)
     private var initialGeoPose: GeoPose? = null
     private var newAnchorText: String = ""
+    private var newAnchorFloor: Int = 0
 
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentAugmentedRealityBinding.inflate(inflater, container, false)
+        _binding = FragmentArMappingBinding.inflate(inflater, container, false)
 
         return binding.root
     }
@@ -122,7 +121,7 @@ class AugmentedRealityFragment : Fragment() {
             }
         } ?: run {
             earth = sceneView.arSession?.earth
-            Log.d("O_O", "Geospatial API initialized and earth object assigned")
+            Log.d(TAG, "Geospatial API initialized and earth object assigned")
         }
         when (arState) {
             NOT_INITIALIZED -> {
@@ -165,7 +164,6 @@ class AugmentedRealityFragment : Fragment() {
         binding.arExtendedFab.setOnClickListener {
             when (arState.fabState) {
                 ArFabState.PLACE -> onPlaceClicked()
-                ArFabState.RESOLVE -> TODO()
                 ArFabState.NEW_ANCHOR -> onNewAnchorClicked()
                 else -> {} //NO-OP
             }
@@ -179,15 +177,11 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     private fun initializeAR() {
-        if (arMode == ArMode.CREATE_FLOOR_PLAN) {
-            anchorHostingCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
-            updateState(PLACE_ANCHOR)
-            placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
-                parent = sceneView
-                isVisible = false
-            }
-        } else {
-            //TODO
+        anchorHostingCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
+        updateState(PLACE_ANCHOR)
+        placementNode = ArModelNode(placementMode = PlacementMode.PLANE_HORIZONTAL).apply {
+            parent = sceneView
+            isVisible = false
         }
     }
 
@@ -317,6 +311,9 @@ class AugmentedRealityFragment : Fragment() {
                 resetPlacementNode()
                 updateState(PLACE_ANCHOR)
                 newAnchorText = dialogBinding.dialogNewAnchorInputText.text.toString()
+                if (dialogBinding.dialogNewAnchorInputFloor.text.toString().isNotEmpty()) {
+                    newAnchorFloor = dialogBinding.dialogNewAnchorInputFloor.text.toString().toInt()
+                }
                 dialog.dismiss()
             } else {
                 dialogBinding.dialogNewAnchorInputLayout.error = getString(R.string.dialog_new_anchor_text_error)
@@ -337,12 +334,13 @@ class AugmentedRealityFragment : Fragment() {
                         anchorNode.isVisible = true
 
                         initialGeoPose?.let {
-                            floorPlan = FloorPlan(CloudAnchor("initial", anchor.cloudAnchorId, it, SerializableQuaternion(anchorNode.quaternion)))
+                            floorPlan = FloorPlan(CloudAnchor("initial", 0, anchor.cloudAnchorId, it, SerializableQuaternion(anchorNode.quaternion)))
                         } ?: run {
                             Log.e("O_O", "hostCloudAnchor: initialGeoPose is null")
                             Toast.makeText(requireContext(), "Could not create floor plan with geoPose, since initialGeoPose is null", Toast.LENGTH_SHORT).show()
-                            floorPlan = FloorPlan(CloudAnchor("initial", anchor.cloudAnchorId, 0.0, 0.0, 0.0, 0.0, SerializableQuaternion(anchorNode.quaternion)))
+                            floorPlan = FloorPlan(CloudAnchor("initial", 0, anchor.cloudAnchorId, 0.0, 0.0, 0.0, 0.0, SerializableQuaternion(anchorNode.quaternion)))
                         }
+                        //TODO possibly find out what floor the initial anchor is on
                         isInitialAnchorPlaced = true
                         Log.d("O_O", "Cloud anchor hosted successfully")
                     } else {
@@ -438,7 +436,7 @@ class AugmentedRealityFragment : Fragment() {
             val newLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(lastAnchor.first.lat, lastAnchor.first.lng, lastAnchor.first.compassHeading, posOffsetToLastAnchor.x, posOffsetToLastAnchor.z)
             val newAlt = lastAnchor.first.alt + posOffsetToLastAnchor.y
 
-            val newAnchor = CloudAnchor(newAnchorText, cloudAnchorId, newLatLng.latitude, newLatLng.longitude, newAlt, lastAnchor.first.compassHeading,
+            val newAnchor = CloudAnchor(newAnchorText, newAnchorFloor, cloudAnchorId, newLatLng.latitude, newLatLng.longitude, newAlt, lastAnchor.first.compassHeading,
                 xOffset, yOffset, zOffset, lastAnchor.first.relativeQuaternion)
 
             addMappingPointsAndClearList(lastAnchor.first)
@@ -469,7 +467,7 @@ class AugmentedRealityFragment : Fragment() {
         listOfMappingPoints.clear()
     }
 
-    private fun updateState(state: ArState) {
+    private fun updateState(state: ArMappingStates) {
         arState = state
         anchorHostingCircle.enabled = arState.anchorCircleEnabled
         binding.arFabConfirm.visibility = arState.fabConfirmVisibility
@@ -484,10 +482,6 @@ class AugmentedRealityFragment : Fragment() {
             ArFabState.PLACE -> {
                 binding.arExtendedFab.text = getString(R.string.ar_fab_place)
                 binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_place_item_24)
-            }
-            ArFabState.RESOLVE -> {
-                binding.arExtendedFab.text = getString(R.string.ar_fab_resolve)
-                binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_cloud_download_24)
             }
             ArFabState.HOST -> {
                 binding.arExtendedFab.text = getString(R.string.ar_fab_hosting)
@@ -523,7 +517,7 @@ class AugmentedRealityFragment : Fragment() {
     }
 
     companion object {
-        private const val TAG = "AugmentedRealityFragment"
+        private const val TAG = "ArMappingFragment"
         private const val MAPPING_DISTANCE_THRESHOLD = 1 //distance in meters between mapping points
     }
 }

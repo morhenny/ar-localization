@@ -36,6 +36,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import de.morhenn.ar_localization.R
+import de.morhenn.ar_localization.ar.AugmentedRealityViewModel
 import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
@@ -50,6 +51,8 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
     private val binding get() = _binding!!
 
     private val viewModelFloorPlan: FloorPlanViewModel by navGraphViewModels(R.id.nav_graph_xml)
+    private val viewModelAr: AugmentedRealityViewModel by navGraphViewModels(R.id.nav_graph_xml)
+
     private lateinit var listAdapter: FloorPlanListAdapter
     private lateinit var recyclerView: RecyclerView
     private lateinit var layoutManager: LinearLayoutManager
@@ -117,7 +120,9 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                 showDialogToUpdate()
             }
             localizeSelectedFloorPlan.observe(viewLifecycleOwner) {
-                //TODO
+                val selectedPlan = currentFloorPlans[listAdapter.expandedPosition]
+                viewModelAr.floorPlan = selectedPlan
+                findNavController().navigate(FloorPlanListFragmentDirections.actionFloorPlanListFragmentToArLocalizingFragment())
             }
         }
 
@@ -215,13 +220,11 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                 map.addMarker(MarkerOptions().position(LatLng(it.lat, it.lng)).icon(BitmapDescriptorFactory.fromBitmap(trackingAnchorIcon)))
                 latLngBounds.include(LatLng(it.lat, it.lng))
             }
-            var lastPos = mainAnchorLatLng
 
             val pointIcon = getBitmapFromVectorDrawable(R.drawable.ic_baseline_blue_dot_6)
             floorPlan.mappingPointList.forEach {
                 val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(mainAnchorLatLng.latitude, mainAnchorLatLng.longitude, floorPlan.mainAnchor.compassHeading, it.x, it.z)
                 map.addMarker(MarkerOptions().position(pointLatLng).icon(BitmapDescriptorFactory.fromBitmap(pointIcon)))
-                lastPos = pointLatLng
             }
             map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds.build(), 250))
         }
@@ -293,7 +296,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             if (navigateFromDialog) {
                 lifecycleScope.launch {
                     delay(40) //needed due to map lagging if navigated with open dialog
-                    findNavController().navigate(FloorPlanListFragmentDirections.actionFloorPlanListFragmentToAugmentedRealityFragment())
+                    findNavController().navigate(FloorPlanListFragmentDirections.actionFloorPlanListFragmentToArMappingFragment())
                 }
             }
         }

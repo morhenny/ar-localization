@@ -3,7 +3,7 @@ package de.morhenn.ar_localization.ar
 import android.view.View.INVISIBLE
 import android.view.View.VISIBLE
 
-enum class ArState(
+enum class ArMappingStates(
     val progressBarVisibility: Int = INVISIBLE,
     val fabEnabled: Boolean = false,
     val fabConfirmVisibility: Int = INVISIBLE,
@@ -20,14 +20,8 @@ enum class ArState(
 
 enum class ArFabState {
     PLACE,
-    RESOLVE,
     HOST,
     NEW_ANCHOR,
-}
-
-enum class ArMode {
-    CREATE_FLOOR_PLAN,
-    LOCALIZE
 }
 
 enum class ModelName {

@@ -2,6 +2,7 @@ package de.morhenn.ar_localization.model
 
 data class CloudAnchor(
     var text: String = "", //description to search by
+    var floor: Int = 0, //floor level of the anchor
     var cloudAnchorId: String = "",
 
     //geo position of the anchor
@@ -16,12 +17,12 @@ data class CloudAnchor(
     var zToMain: Float = 0.0f,
     var relativeQuaternion: SerializableQuaternion = SerializableQuaternion(),
 ) {
-    constructor(text: String, cloudAnchorId: String, lat: Double, lng: Double, alt: Double, compassHeading: Double) :
-            this(text, cloudAnchorId, lat, lng, alt, compassHeading, 0.0f, 0.0f, 0.0f, SerializableQuaternion())
+    constructor(text: String, floor: Int, cloudAnchorId: String, lat: Double, lng: Double, alt: Double, compassHeading: Double) :
+            this(text, floor, cloudAnchorId, lat, lng, alt, compassHeading, 0.0f, 0.0f, 0.0f, SerializableQuaternion())
 
-    constructor(text: String, cloudAnchorId: String, lat: Double, lng: Double, alt: Double, compassHeading: Double, quaternion: SerializableQuaternion) :
-            this(text, cloudAnchorId, lat, lng, alt, compassHeading, 0.0f, 0.0f, 0.0f, quaternion)
+    constructor(text: String, floor: Int, cloudAnchorId: String, lat: Double, lng: Double, alt: Double, compassHeading: Double, quaternion: SerializableQuaternion) :
+            this(text, floor, cloudAnchorId, lat, lng, alt, compassHeading, 0.0f, 0.0f, 0.0f, quaternion)
 
-    constructor(text: String, cloudAnchorId: String, geoPose: GeoPose, quaternion: SerializableQuaternion) :
-            this(text, cloudAnchorId, geoPose.latitude, geoPose.longitude, geoPose.altitude, geoPose.heading, 0.0f, 0.0f, 0.0f, quaternion)
+    constructor(text: String, floor: Int, cloudAnchorId: String, geoPose: GeoPose, quaternion: SerializableQuaternion) :
+            this(text, floor, cloudAnchorId, geoPose.latitude, geoPose.longitude, geoPose.altitude, geoPose.heading, 0.0f, 0.0f, 0.0f, quaternion)
 }
