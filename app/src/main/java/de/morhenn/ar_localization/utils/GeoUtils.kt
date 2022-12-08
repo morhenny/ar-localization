@@ -44,4 +44,25 @@ object GeoUtils {
         val z = worldPos1.z - worldPos2.z
         return sqrt(x * x + y * y + z * z)
     }
+
+    fun distanceBetweenTwoWorldCoordinates(lat1: Double, lng1: Double, alt1: Double, lat2: Double, lng2: Double, alt2: Double): Double {
+        val earthRadius = 6378.1
+
+        val latR1 = Math.toRadians(lat1)
+        val lngR1 = Math.toRadians(lng1)
+        val latR2 = Math.toRadians(lat2)
+        val lngR2 = Math.toRadians(lng2)
+
+        val dLat = latR2 - latR1
+        val dLng = lngR2 - lngR1
+
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(latR1) * cos(latR2) *
+                sin(dLng / 2) * sin(dLng / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        val distance = earthRadius * c * 1000
+
+        return sqrt(distance * distance + (alt2 - alt1) * (alt2 - alt1))
+    }
 }

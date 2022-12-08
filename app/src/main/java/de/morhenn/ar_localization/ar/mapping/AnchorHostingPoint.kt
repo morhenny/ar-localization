@@ -1,4 +1,4 @@
-package de.morhenn.ar_localization.ar
+package de.morhenn.ar_localization.ar.mapping
 
 import android.content.Context
 import android.opengl.Matrix

@@ -6,12 +6,12 @@
 
     <fragment
         android:id="@+id/arMappingFragment"
-        android:name="de.morhenn.ar_localization.ar.ArMappingFragment"
+        android:name="de.morhenn.ar_localization.ar.mapping.ArMappingFragment"
         android:label="ArMappingFragment">
     </fragment>
     <fragment
         android:id="@+id/arLocalizingFragment"
-        android:name="de.morhenn.ar_localization.ar.ArLocalizingFragment"
+        android:name="de.morhenn.ar_localization.ar.localizing.ArLocalizingFragment"
         android:label="ArLocalizingFragment">
     </fragment>
     <fragment

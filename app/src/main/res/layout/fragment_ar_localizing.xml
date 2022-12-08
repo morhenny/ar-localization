@@ -28,6 +28,13 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/ar_localizing_progress_bar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:indeterminate="true"
+                android:visibility="invisible" />
+
             <TextView
                 android:id="@+id/ar_localizing_bottom_sheet_title"
                 android:layout_width="match_parent"
@@ -40,12 +47,12 @@
 
             <com.google.android.material.divider.MaterialDivider
                 android:id="@+id/ar_localizing_bottom_sheet_divider"
-                app:dividerInsetStart="24dp"
-                app:dividerInsetEnd="24dp"
-                android:layout_marginBottom="16dp"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal" />
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="16dp"
+                app:dividerInsetEnd="24dp"
+                app:dividerInsetStart="24dp" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/ar_localizing_bottom_sheet_list"

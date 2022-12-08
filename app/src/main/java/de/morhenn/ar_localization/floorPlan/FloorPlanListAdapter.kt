@@ -80,6 +80,7 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
         with(holder) {
             buttonDelete.setOnClickListener {
                 _deleteSelectedFloorPlan.value = SimpleEvent()
+                notifyItemRemoved(expandedPosition)
                 expandedPosition = -1
                 _selectedFloorPlanChanged.value = SimpleEvent()
             }

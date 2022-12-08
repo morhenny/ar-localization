@@ -8,17 +8,27 @@ enum class ArMappingStates(
     val fabEnabled: Boolean = false,
     val fabConfirmVisibility: Int = INVISIBLE,
     val anchorCircleEnabled: Boolean = false,
-    val fabState: ArFabState = ArFabState.PLACE,
+    val fabState: ArMappingFabState = ArMappingFabState.PLACE,
     val undoVisibility: Int = INVISIBLE,
 ) {
     NOT_INITIALIZED,
-    PLACE_ANCHOR(fabEnabled = true, anchorCircleEnabled = true, undoVisibility = VISIBLE, fabState = ArFabState.PLACE),
+    PLACE_ANCHOR(fabEnabled = true, anchorCircleEnabled = true, undoVisibility = VISIBLE, fabState = ArMappingFabState.PLACE),
     SCAN_ANCHOR_CIRCLE(anchorCircleEnabled = true, undoVisibility = VISIBLE),
-    HOSTING(progressBarVisibility = VISIBLE, anchorCircleEnabled = true, undoVisibility = VISIBLE, fabState = ArFabState.HOST),
-    MAPPING(fabEnabled = true, undoVisibility = VISIBLE, fabState = ArFabState.NEW_ANCHOR, fabConfirmVisibility = VISIBLE),
+    HOSTING(progressBarVisibility = VISIBLE, anchorCircleEnabled = true, undoVisibility = VISIBLE, fabState = ArMappingFabState.HOST),
+    MAPPING(fabEnabled = true, undoVisibility = VISIBLE, fabState = ArMappingFabState.NEW_ANCHOR, fabConfirmVisibility = VISIBLE),
 }
 
-enum class ArFabState {
+enum class ArLocalizingStates(
+    val progressBarVisibility: Int = INVISIBLE,
+) {
+    NOT_INITIALIZED,
+    RESOLVING_FROM_GEOSPATIAL(progressBarVisibility = VISIBLE),
+    RESOLVING_FROM_SELECTED(progressBarVisibility = VISIBLE),
+    TRACKING,
+    TRACKING_AND_RESOLVING
+}
+
+enum class ArMappingFabState {
     PLACE,
     HOST,
     NEW_ANCHOR,
@@ -28,4 +38,6 @@ enum class ModelName {
     DEBUG_CUBE,
     AXIS,
     BALL,
+    GEO_ANCHOR,
+    GEO_ANCHOR_ARROW,
 }

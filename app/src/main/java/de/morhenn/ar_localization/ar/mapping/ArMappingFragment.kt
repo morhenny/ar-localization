@@ -1,4 +1,4 @@
-package de.morhenn.ar_localization.ar
+package de.morhenn.ar_localization.ar.mapping
 
 import android.app.AlertDialog
 import android.net.Uri
@@ -19,7 +19,10 @@ import com.google.ar.sceneform.rendering.ModelRenderable
 import com.google.ar.sceneform.rendering.Renderable
 import com.google.ar.sceneform.rendering.ResourceManager
 import de.morhenn.ar_localization.R
+import de.morhenn.ar_localization.ar.ArMappingFabState
+import de.morhenn.ar_localization.ar.ArMappingStates
 import de.morhenn.ar_localization.ar.ArMappingStates.*
+import de.morhenn.ar_localization.ar.ModelName
 import de.morhenn.ar_localization.ar.ModelName.*
 import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
 import de.morhenn.ar_localization.databinding.FragmentArMappingBinding
@@ -162,8 +165,8 @@ class ArMappingFragment : Fragment() {
     private fun initializeUIElements() {
         binding.arExtendedFab.setOnClickListener {
             when (arState.fabState) {
-                ArFabState.PLACE -> onPlaceClicked()
-                ArFabState.NEW_ANCHOR -> onNewAnchorClicked()
+                ArMappingFabState.PLACE -> onPlaceClicked()
+                ArMappingFabState.NEW_ANCHOR -> onNewAnchorClicked()
                 else -> {} //NO-OP
             }
         }
@@ -478,15 +481,15 @@ class ArMappingFragment : Fragment() {
             binding.arFabUndo.visibility = arState.undoVisibility
         }
         when (arState.fabState) {
-            ArFabState.PLACE -> {
+            ArMappingFabState.PLACE -> {
                 binding.arExtendedFab.text = getString(R.string.ar_fab_place)
                 binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_place_item_24)
             }
-            ArFabState.HOST -> {
+            ArMappingFabState.HOST -> {
                 binding.arExtendedFab.text = getString(R.string.ar_fab_hosting)
                 binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_cloud_upload_24)
             }
-            ArFabState.NEW_ANCHOR -> {
+            ArMappingFabState.NEW_ANCHOR -> {
                 binding.arExtendedFab.text = getString(R.string.ar_fab_new_anchor)
                 binding.arExtendedFab.icon = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_baseline_add_24)
             }
