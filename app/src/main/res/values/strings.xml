@@ -29,6 +29,11 @@
     <string name="update_floor_plan_dialog_title">Update the Floor Plan</string>
     <string name="update_floor_plan_dialog_hint">Change name or description of the selected floor plan</string>
     <string name="new_anchor_dialog_input_floor_hint">On what floor is the anchor</string>
-    <string name="ar_localize_bottom_sheet_title">Select Cloud Anchor to Localize:</string>
+    <string name="ar_localizing_bottom_sheet_title_collapsed">Use Geospatial to find anchors near you,\nor swipe up to select manually instead</string>
+    <string name="ar_localizing_bottom_sheet_title_expanded">Select an anchor that seems close to you to resolve\nEither use the list, map icon or select a floor if available</string>
+    <string name="ar_localizing_bottom_sheet_title_tracking">Successfully resolved an anchor.\nWhile holding the camera in a tracked area, your position will be calculated</string>
+    <string name="ar_localizing_bottom_sheet_title_resolving">Trying to resolve anchors around you \nMove your phone around and point the camera at your surroundings</string>
+    <string name="sort_by_name">By name</string>
+    <string name="sort_by_floor">By floor</string>
 
 </resources>

@@ -4,12 +4,11 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.os.Bundle
 import android.os.Looper
 import android.transition.Slide
 import android.transition.TransitionManager
+import android.util.Log
 import android.view.*
 import android.view.WindowManager.LayoutParams
 import android.widget.SearchView
@@ -25,14 +24,9 @@ import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.location.*
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.LatLngBounds
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import de.morhenn.ar_localization.R
@@ -40,7 +34,8 @@ import de.morhenn.ar_localization.ar.AugmentedRealityViewModel
 import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
-import de.morhenn.ar_localization.utils.GeoUtils
+import de.morhenn.ar_localization.utils.Utils
+import de.morhenn.ar_localization.utils.Utils.showFloorPlanOnMap
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -137,6 +132,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                 searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
                     override fun onQueryTextSubmit(query: String?): Boolean {
                         viewModelFloorPlan.filterList(query)
+                        Utils.hideKeyboard(requireActivity())
                         return true
                     }
 
@@ -173,7 +169,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             setOnMapLoadedCallback {
                 if (waitingOnInitialMapLoad) {
                     if (listAdapter.expandedPosition != -1)
-                        showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
+                        showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition], this, requireContext(), 200)
                     waitingOnInitialMapLoad = false
                 }
             }
@@ -197,36 +193,12 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                     binding.floorPlanMap.visibility = View.VISIBLE
                     layoutManager.scrollToPositionWithOffset(pos, 150)
                     if (!waitingOnInitialMapLoad) {
-                        showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
+                        showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition], googleMap, requireContext(), 200)
                     }
                 } else {
-                    showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition])
+                    showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition], googleMap, requireContext(), 200)
                 }
             }
-        }
-    }
-
-    private fun showFloorPlanOnMap(floorPlan: FloorPlan) {
-        map?.let { map ->
-            val mainAnchorLatLng = LatLng(floorPlan.mainAnchor.lat, floorPlan.mainAnchor.lng)
-            map.clear()
-            val latLngBounds = LatLngBounds.Builder()
-            latLngBounds.include(mainAnchorLatLng)
-
-            val mainAnchorIcon = getBitmapFromVectorDrawable(R.drawable.ic_outline_flag_circle_24)
-            val trackingAnchorIcon = getBitmapFromVectorDrawable(R.drawable.ic_outline_flag_24)
-            map.addMarker(MarkerOptions().position(mainAnchorLatLng).icon(BitmapDescriptorFactory.fromBitmap(mainAnchorIcon)))
-            floorPlan.cloudAnchorList.forEach {
-                map.addMarker(MarkerOptions().position(LatLng(it.lat, it.lng)).icon(BitmapDescriptorFactory.fromBitmap(trackingAnchorIcon)))
-                latLngBounds.include(LatLng(it.lat, it.lng))
-            }
-
-            val pointIcon = getBitmapFromVectorDrawable(R.drawable.ic_baseline_blue_dot_6)
-            floorPlan.mappingPointList.forEach {
-                val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(mainAnchorLatLng.latitude, mainAnchorLatLng.longitude, floorPlan.mainAnchor.compassHeading, it.x, it.z)
-                map.addMarker(MarkerOptions().position(pointLatLng).icon(BitmapDescriptorFactory.fromBitmap(pointIcon)))
-            }
-            map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds.build(), 250))
         }
     }
 
@@ -302,18 +274,6 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    private fun getBitmapFromVectorDrawable(drawableId: Int): Bitmap {
-        val drawable = ContextCompat.getDrawable(requireContext(), drawableId)
-        val bitmap = Bitmap.createBitmap(
-            drawable!!.intrinsicWidth,
-            drawable.intrinsicHeight, Bitmap.Config.ARGB_8888
-        )
-        val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, canvas.width, canvas.height)
-        drawable.draw(canvas)
-        return bitmap
-    }
-
     private fun requestLocationPermission() {
         val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
@@ -350,6 +310,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
     override fun onPause() {
         super.onPause()
         stopLocationUpdates()
+        map?.isIndoorEnabled = false
     }
 
     override fun onResume() {
@@ -357,6 +318,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         if (requestingLocationUpdates) {
             startLocationUpdates()
         }
+        map?.isIndoorEnabled = true
     }
 
     override fun onDestroyView() {

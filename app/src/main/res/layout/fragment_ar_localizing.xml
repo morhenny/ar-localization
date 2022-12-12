@@ -16,51 +16,107 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <FrameLayout
+    <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/ar_localizing_bottom_sheet"
         style="@style/AppStandardBottomSheet"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fitsSystemWindows="false"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="match_parent">
 
             <com.google.android.material.progressindicator.LinearProgressIndicator
                 android:id="@+id/ar_localizing_progress_bar"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:indeterminate="true"
-                android:visibility="invisible" />
-
-            <TextView
-                android:id="@+id/ar_localizing_bottom_sheet_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="20dp"
-                android:text="@string/ar_localize_bottom_sheet_title"
-                android:textAlignment="center"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:visibility="invisible"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <com.google.android.material.divider.MaterialDivider
                 android:id="@+id/ar_localizing_bottom_sheet_divider"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginBottom="16dp"
-                app:dividerInsetEnd="24dp"
-                app:dividerInsetStart="24dp" />
+                android:layout_marginVertical="4dp"
+                app:dividerInsetEnd="150dp"
+                app:dividerInsetStart="150dp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_progress_bar" />
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/ar_localizing_bottom_sheet_list"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
+            <ImageButton
+                android:id="@+id/ar_localizing_bottom_sheet_close_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_baseline_close_24"
+                android:visibility="gone"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_divider" />
 
-        </LinearLayout>
-    </FrameLayout>
+            <TextView
+                android:id="@+id/ar_localizing_bottom_sheet_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:padding="4dp"
+                android:text="@string/ar_localizing_bottom_sheet_title_collapsed"
+                android:textAlignment="center"
+                android:textSize="16sp"
+                app:layout_constraintLeft_toRightOf="@id/ar_localizing_bottom_sheet_close_button"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_divider" />
 
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/ar_localizing_bottom_sheet_map"
+                android:name="com.google.android.gms.maps.SupportMapFragment"
+                android:layout_width="0dp"
+                android:layout_height="200dp"
+                android:layout_margin="4dp"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_title" />
 
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/ar_localizing_bottom_sheet_anchor_list_scroll_view"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:overScrollMode="never"
+                app:layout_constraintBottom_toTopOf="@id/ar_localizing_bottom_sheet_search_view"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toRightOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_map">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/ar_localizing_bottom_sheet_anchor_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:nestedScrollingEnabled="true" />
+            </androidx.core.widget.NestedScrollView>
+
+            <androidx.appcompat.widget.SearchView
+                android:id="@+id/ar_localizing_bottom_sheet_search_view"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintLeft_toLeftOf="parent"
+                app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_search_view_sort_button" />
+
+            <ImageButton
+                android:id="@+id/ar_localizing_bottom_sheet_search_view_sort_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:src="@drawable/ic_baseline_sort_24"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintLeft_toRightOf="@id/ar_localizing_bottom_sheet_search_view"
+                app:layout_constraintRight_toRightOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.coordinatorlayout.widget.CoordinatorLayout>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
+

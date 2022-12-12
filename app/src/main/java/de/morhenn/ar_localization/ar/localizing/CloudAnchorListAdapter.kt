@@ -25,12 +25,12 @@ class CloudAnchorListAdapter(val onClickItem: (item: CloudAnchor) -> Unit) : Lis
     class ViewHolder(private val binding: ItemCloudAnchorListBinding) : RecyclerView.ViewHolder(binding.root) {
 
         val listItem = binding.cloudAnchorListItem
+
         fun bind(cloudAnchor: CloudAnchor) {
-            binding.cloudAnchorListText.text = cloudAnchor.text
-            binding.cloudAnchorListFloor.text = buildString {
-                append("Floor: ")
-                append(cloudAnchor.floor)
+            binding.cloudAnchorListText.text = buildString {
+                append(cloudAnchor.text)
             }
+            binding.cloudAnchorListFloor.text = cloudAnchor.floor.toString()
         }
     }
 

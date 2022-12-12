@@ -31,14 +31,14 @@
     </style>
 
     <style name="AppStandardBottomSheet">
+        <item name="android:windowSoftInputMode">adjustResize</item>
         <item name="shapeAppearance">@style/LargeComponent</item>
         <item name="android:elevation">8dp</item>
         <item name="behavior_hideable">false</item>
         <item name="behavior_draggable">true</item>
-        <item name="behavior_skipCollapsed">false</item>
-        <item name="behavior_peekHeight">80dp</item>
-        <item name="behavior_fitToContents">false</item>
-        <item name="behavior_halfExpandedRatio">0.5</item>
+        <item name="behavior_skipCollapsed">true</item>
+        <item name="behavior_peekHeight">250dp</item>
+        <item name="behavior_fitToContents">true</item>
         <item name="behavior_expandedOffset">0dp</item>
     </style>
 </resources>
