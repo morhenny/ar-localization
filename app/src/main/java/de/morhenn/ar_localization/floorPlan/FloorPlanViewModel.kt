@@ -68,9 +68,10 @@ class FloorPlanViewModel : ViewModel() {
         }
     }
 
-    fun refreshFloorPlanList() {
+    fun refreshFloorPlanList(sortByName: Boolean) {
         viewModelScope.launch {
-            _floorPlans.value = FirebaseFloorPlanService.getFloorPlanList()
+            _floorPlans.value = if (sortByName) FirebaseFloorPlanService.getFloorPlanListByName()
+            else FirebaseFloorPlanService.getFloorPlanList()
         }
     }
 

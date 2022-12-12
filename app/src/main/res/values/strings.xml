@@ -35,5 +35,9 @@
     <string name="ar_localizing_bottom_sheet_title_resolving">Trying to resolve anchors around you \nMove your phone around and point the camera at your surroundings</string>
     <string name="sort_by_name">By name</string>
     <string name="sort_by_floor">By floor</string>
+    <string name="sort_by_distance">By distance</string>
+    <string name="sort_by_created">By time created</string>
+    <string name="menu_item_search">Search</string>
+    <string name="menu_item_sort">Sort</string>
 
 </resources>

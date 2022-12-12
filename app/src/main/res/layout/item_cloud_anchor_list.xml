@@ -4,7 +4,7 @@
     android:id="@+id/cloud_anchor_list_item"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="6dp"
+    android:layout_margin="4dp"
     card_view:cardCornerRadius="4dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -16,7 +16,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="8dp"
-            android:textSize="20sp"
+            android:textSize="16sp"
+            android:paddingVertical="10dp"
             card_view:layout_constraintBottom_toBottomOf="parent"
             card_view:layout_constraintLeft_toLeftOf="parent"
             card_view:layout_constraintRight_toLeftOf="@id/cloud_anchor_list_floor_icon"

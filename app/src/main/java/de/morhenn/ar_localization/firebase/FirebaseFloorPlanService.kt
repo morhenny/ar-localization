@@ -31,6 +31,16 @@ object FirebaseFloorPlanService {
     suspend fun getFloorPlanList(): List<FloorPlan>? {
         val db = FirebaseFirestore.getInstance()
         return try {
+            db.collection("floorPlans").get().await().toObjects(FloorPlan::class.java)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error getting documents: ", e)
+            null
+        }
+    }
+
+    suspend fun getFloorPlanListByName(): List<FloorPlan>? {
+        val db = FirebaseFirestore.getInstance()
+        return try {
             db.collection("floorPlans").orderBy("name").get().await().toObjects(FloorPlan::class.java)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting documents: ", e)

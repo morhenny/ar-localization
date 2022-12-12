@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.Looper
 import android.transition.Slide
 import android.transition.TransitionManager
-import android.util.Log
 import android.view.*
 import android.view.WindowManager.LayoutParams
 import android.widget.SearchView
@@ -144,16 +143,19 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             }
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                if (menuItem.itemId == R.id.floor_plan_list_sort_by) {
-                    if (sortByLocation) {
+                when (menuItem.itemId) {
+                    R.id.sort_floor_plans_by_name -> {
                         viewModelFloorPlan.lastLocation = null
-                        viewModelFloorPlan.refreshFloorPlanList()
-                        sortByLocation = false
-                    } else {
-                        sortByLocation = true
+                        viewModelFloorPlan.refreshFloorPlanList(true)
+                    }
+                    R.id.sort_floor_plans_by_distance -> {
                         listAdapter.currentLocation?.let { viewModelFloorPlan.sortListByNewLocation(it) }
                     }
-                    return true
+                    R.id.sort_floor_plans_by_created -> {
+                        viewModelFloorPlan.lastLocation = null
+                        viewModelFloorPlan.refreshFloorPlanList(false)
+                    }
+                    else -> {}
                 }
                 return false
             }
