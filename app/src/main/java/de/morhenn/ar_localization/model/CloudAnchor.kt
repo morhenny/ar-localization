@@ -25,4 +25,8 @@ data class CloudAnchor(
 
     constructor(text: String, floor: Int, cloudAnchorId: String, geoPose: GeoPose, quaternion: SerializableQuaternion) :
             this(text, floor, cloudAnchorId, geoPose.latitude, geoPose.longitude, geoPose.altitude, geoPose.heading, 0.0f, 0.0f, 0.0f, quaternion)
+
+    fun getGeoPose(): GeoPose {
+        return GeoPose(lat, lng, alt, compassHeading)
+    }
 }

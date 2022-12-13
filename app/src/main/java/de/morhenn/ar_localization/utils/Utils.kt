@@ -45,7 +45,7 @@ object Utils {
             latLngBounds.include(LatLng(it.lat, it.lng))
         }
 
-        val pointIcon = getBitmapFromVectorDrawable(R.drawable.ic_baseline_blue_dot_6, context)
+        val pointIcon = getBitmapFromVectorDrawable(R.drawable.ic_baseline_blue_dot_3, context)
         floorPlan.mappingPointList.forEach {
             val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(mainAnchorLatLng.latitude, mainAnchorLatLng.longitude, floorPlan.mainAnchor.compassHeading, it.x, it.z)
             map.addMarker(MarkerOptions().position(pointLatLng).icon(BitmapDescriptorFactory.fromBitmap(pointIcon)))

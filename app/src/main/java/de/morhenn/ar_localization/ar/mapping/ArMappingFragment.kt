@@ -217,18 +217,18 @@ class ArMappingFragment : Fragment() {
                                 }
                                 resetPlacementNode()
                             } ?: run {
-                                Log.e("O_O", "lastHitResult is null, no anchor created for trackingAnchorNode")
+                                Log.e(TAG, "lastHitResult is null, no anchor created for trackingAnchorNode")
                                 updateState(PLACE_ANCHOR)
                             }
                         } ?: run {
-                            Log.e("O_O", "Pose is null, cannot place trackingNode")
+                            Log.e(TAG, "Pose is null, cannot place trackingNode")
                             updateState(PLACE_ANCHOR)
                         }
                     }
                 }
             }
         } ?: run {
-            Log.e("O_O", "onPlaceClicked: placementNode is null")
+            Log.e(TAG, "onPlaceClicked: placementNode is null")
         }
     }
 
@@ -246,7 +246,7 @@ class ArMappingFragment : Fragment() {
                 }
             } ?: run {
                 Toast.makeText(requireContext(), "No floor plan created yet, cannot confirm", Toast.LENGTH_SHORT).show()
-                Log.e("O_O", "onConfirmClicked: floorPlan is null")
+                Log.e(TAG, "onConfirmClicked: floorPlan is null")
             }
         }
     }
@@ -338,13 +338,13 @@ class ArMappingFragment : Fragment() {
                         initialGeoPose?.let {
                             floorPlan = FloorPlan(CloudAnchor("initial", 0, anchor.cloudAnchorId, it, SerializableQuaternion(anchorNode.quaternion)))
                         } ?: run {
-                            Log.e("O_O", "hostCloudAnchor: initialGeoPose is null")
+                            Log.e(TAG, "hostCloudAnchor: initialGeoPose is null")
                             Toast.makeText(requireContext(), "Could not create floor plan with geoPose, since initialGeoPose is null", Toast.LENGTH_SHORT).show()
                             floorPlan = FloorPlan(CloudAnchor("initial", 0, anchor.cloudAnchorId, 0.0, 0.0, 0.0, 0.0, SerializableQuaternion(anchorNode.quaternion)))
                         }
                         //TODO possibly find out what floor the initial anchor is on
                         isInitialAnchorPlaced = true
-                        Log.d("O_O", "Cloud anchor hosted successfully")
+                        Log.d(TAG, "Cloud anchor hosted successfully")
                     } else {
                         onHostingFailed()
                     }
@@ -358,7 +358,7 @@ class ArMappingFragment : Fragment() {
                         anchorNode.isVisible = true
                         addAnchorAndMappingPointsToFloorPlan(anchorNode, anchor.cloudAnchorId)
                         listOfAnchorNodes.add(anchorNode)
-                        Log.d("O_O", "Cloud anchor hosted successfully")
+                        Log.d(TAG, "Cloud anchor hosted successfully")
                     } else {
                         onHostingFailed()
                     }
@@ -392,7 +392,7 @@ class ArMappingFragment : Fragment() {
         Toast.makeText(requireContext(), "Hosting failed", Toast.LENGTH_SHORT).show()
         resetAnchorHostingCircle()
         updateState(PLACE_ANCHOR)
-        Log.d("O_O", "Cloud anchor hosting failed")
+        Log.d(TAG, "Cloud anchor hosting failed")
     }
 
     private fun placeMappingPoint() {

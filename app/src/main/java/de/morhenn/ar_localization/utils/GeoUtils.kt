@@ -1,6 +1,7 @@
 package de.morhenn.ar_localization.utils
 
 import com.google.android.gms.maps.model.LatLng
+import de.morhenn.ar_localization.model.GeoPose
 import io.github.sceneview.math.Position
 import kotlin.math.*
 
@@ -27,6 +28,16 @@ object GeoUtils {
         return LatLng(latNew, lngNew)
     }
 
+    //calculate new GeoPose by base on a relativePosition from another GeoPose
+    fun getGeoPoseByLocalCoordinateOffset(startPose: GeoPose, offsetPosition: Position): GeoPose {
+        val latLngOnlyX = getLatLngByDistanceAndBearing(startPose.latitude, startPose.longitude, (startPose.heading + 90.0) % 360, offsetPosition.x / 1000.0)
+
+        val latLng = getLatLngByDistanceAndBearing(latLngOnlyX.latitude, latLngOnlyX.longitude, startPose.heading, -offsetPosition.z / 1000.0)
+
+        val altitude = startPose.altitude + offsetPosition.y
+
+        return GeoPose(latLng.latitude, latLng.longitude, altitude, startPose.heading)
+    }
 
     //calculate new LatLng with offsetX and offsetZ
     //offsetX in meters towards startHeading
@@ -35,6 +46,22 @@ object GeoUtils {
         val latLngOnlyX = getLatLngByDistanceAndBearing(startLat, startLng, (startHeading + 90.0) % 360, offsetX / 1000.0)
 
         return getLatLngByDistanceAndBearing(latLngOnlyX.latitude, latLngOnlyX.longitude, startHeading, -offsetZ / 1000.0)
+    }
+
+    //calculate relative position of one GeoPose to another
+    fun getLocalCoordinateOffsetFromTwoGeoPoses(mainGeoPose: GeoPose, offsetGeoPose: GeoPose): Position {
+        val mainLatLng = LatLng(mainGeoPose.latitude, mainGeoPose.longitude)
+        val offsetLatLng = LatLng(offsetGeoPose.latitude, offsetGeoPose.longitude)
+
+        val distance = distanceBetweenTwoLatLng(mainLatLng, offsetLatLng)
+        val bearing = bearingBetweenTwoLatLng(mainLatLng, offsetLatLng)
+
+        val offsetX = distance * sin(Math.toRadians(bearing - mainGeoPose.heading))
+        val offsetZ = distance * cos(Math.toRadians(bearing - mainGeoPose.heading))
+
+        val offsetY = offsetGeoPose.altitude - mainGeoPose.altitude
+
+        return Position(offsetX.toFloat(), offsetY.toFloat(), -offsetZ.toFloat())
     }
 
     //calculate distance in meters between 2 positions in the ar world
@@ -46,12 +73,19 @@ object GeoUtils {
     }
 
     fun distanceBetweenTwoWorldCoordinates(lat1: Double, lng1: Double, alt1: Double, lat2: Double, lng2: Double, alt2: Double): Double {
+        val distance = distanceBetweenTwoLatLng(LatLng(lat1, lng1), LatLng(lat2, lng2))
+
+        return sqrt(distance * distance + (alt2 - alt1) * (alt2 - alt1))
+    }
+
+    //calculate distance in meters between 2 LatLng
+    fun distanceBetweenTwoLatLng(start: LatLng, end: LatLng): Double {
         val earthRadius = 6378.1
 
-        val latR1 = Math.toRadians(lat1)
-        val lngR1 = Math.toRadians(lng1)
-        val latR2 = Math.toRadians(lat2)
-        val lngR2 = Math.toRadians(lng2)
+        val latR1 = Math.toRadians(start.latitude)
+        val lngR1 = Math.toRadians(start.longitude)
+        val latR2 = Math.toRadians(end.latitude)
+        val lngR2 = Math.toRadians(end.longitude)
 
         val dLat = latR2 - latR1
         val dLng = lngR2 - lngR1
@@ -61,8 +95,23 @@ object GeoUtils {
                 sin(dLng / 2) * sin(dLng / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
-        val distance = earthRadius * c * 1000
+        return earthRadius * c * 1000
+    }
 
-        return sqrt(distance * distance + (alt2 - alt1) * (alt2 - alt1))
+    //calculate bearing in degrees between 2 LatLng
+    fun bearingBetweenTwoLatLng(start: LatLng, end: LatLng): Double {
+        val latR1 = Math.toRadians(start.latitude)
+        val lngR1 = Math.toRadians(start.longitude)
+        val latR2 = Math.toRadians(end.latitude)
+        val lngR2 = Math.toRadians(end.longitude)
+
+        val dLng = lngR2 - lngR1
+
+        val y = sin(dLng) * cos(latR2)
+        val x = cos(latR1) * sin(latR2) -
+                sin(latR1) * cos(latR2) * cos(dLng)
+        val bearing = atan2(y, x)
+
+        return (Math.toDegrees(bearing) + 360) % 360
     }
 }

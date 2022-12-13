@@ -15,9 +15,14 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
@@ -46,6 +51,8 @@ import io.github.sceneview.ar.arcore.planeFindingEnabled
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.ArNode
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.toFloat3
+import io.github.sceneview.math.toVector3
 import io.github.sceneview.model.await
 import java.util.*
 
@@ -76,6 +83,15 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var arState: ArLocalizingStates = NOT_INITIALIZED
 
     private val earthNodeList = mutableListOf<ArNode>()
+
+    private var currentCloudAnchorNode: ArNode? = null
+    private var currentCloudAnchor: CloudAnchor? = null
+    private var userPose: GeoPose? = null
+    private var currentRenderedMappingPoints = mutableListOf<ArNode>()
+    private var userPositionMarker: Marker? = null
+    private var geospatialPositionMarker: Marker? = null
+
+    private var lastUpdateMillis: Long = 0
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArLocalizingBinding.inflate(inflater, container, false)
@@ -128,16 +144,91 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             earth = sceneView.arSession?.earth
             Log.d(TAG, "Geospatial API initialized and earth object assigned")
         }
+        if (arState == TRACKING) {
+            val currentMillis = System.currentTimeMillis()
+            if (currentMillis - lastUpdateMillis > INTERVAL_POSITION_UPDATE) {
+                lastUpdateMillis = currentMillis
+                currentCloudAnchor?.let { cloudAnchor ->
+                    userPose?.let {
+                        Log.d(TAG, "Updating rendered positions from user pose $it")
+                        updateRenderedMappingPointsList(it)
+                    } ?: run {
+                        updateRenderedMappingPointsList(cloudAnchor.getGeoPose())
+                    }
+                    if (currentRenderedMappingPoints.isNotEmpty()) {
+                        calculateUserPose()
+                    }
+                }
+            }
+        }
     }
+
+    private fun calculateUserPose() {
+        val cameraPositionRelativeToCurrentAnchor = currentCloudAnchorNode!!.worldToLocalPosition(sceneView.camera.worldPosition.toVector3()).toFloat3()
+        val cameraGeoPoseFromAnchor = GeoUtils.getGeoPoseByLocalCoordinateOffset(currentCloudAnchor!!.getGeoPose(), cameraPositionRelativeToCurrentAnchor)
+        map?.let { map ->
+            val userIcon = BitmapDescriptorFactory.fromBitmap(Utils.getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_green, requireContext()))
+            userPositionMarker?.remove()
+            userPositionMarker = map.addMarker(MarkerOptions().position(cameraGeoPoseFromAnchor.getLatLng()).icon(userIcon))
+            earth?.let {
+                val geospatialIcon = BitmapDescriptorFactory.fromBitmap(Utils.getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_red, requireContext()))
+                geospatialPositionMarker?.remove()
+                val earthLatLng = LatLng(it.cameraGeospatialPose.latitude, it.cameraGeospatialPose.longitude)
+                geospatialPositionMarker = map.addMarker(MarkerOptions().position(earthLatLng).icon(geospatialIcon))
+            }
+            val cameraUpdate = CameraUpdateFactory.newLatLng(cameraGeoPoseFromAnchor.getLatLng())
+            map.moveCamera(cameraUpdate)
+        }
+        Log.d(TAG, "Camera GeoPose calculated from Anchor: $cameraGeoPoseFromAnchor")
+        userPose = cameraGeoPoseFromAnchor
+    }
+
+    private fun updateRenderedMappingPointsList(geoPose: GeoPose) {
+        val newRenderedMappingPoints = mutableListOf<ArNode>()
+
+        val relativePositionOfPose = GeoUtils.getLocalCoordinateOffsetFromTwoGeoPoses(floorPlan.mainAnchor.getGeoPose(), geoPose)
+        val relativePositionOfCurrentAnchor = GeoUtils.getLocalCoordinateOffsetFromTwoGeoPoses(floorPlan.mainAnchor.getGeoPose(), currentCloudAnchor!!.getGeoPose())
+        floorPlan.mappingPointList.forEach {
+            val distance = GeoUtils.distanceBetweenTwo3dCoordinates(it.getPosition(), relativePositionOfPose)
+            if (distance < MAPPING_POINT_RENDER_DISTANCE) {
+                val relativePositionOfMappingPointToCurrentAnchor = it.getPosition() - relativePositionOfCurrentAnchor
+                val potentiallyAlreadyCurrentNode = currentRenderedMappingPoints.find { arNode -> arNode.position == relativePositionOfMappingPointToCurrentAnchor }
+                potentiallyAlreadyCurrentNode?.let {
+                    newRenderedMappingPoints.add(it)
+                } ?: run {
+                    val node = ArNode().apply {
+                        this.parent = currentCloudAnchorNode
+                        this.position = relativePositionOfMappingPointToCurrentAnchor
+                        setModel(modelMap[BALL])
+                    }
+                    newRenderedMappingPoints.add(node)
+                }
+            }
+        }
+        val mappingPointsToRemove = mutableListOf<ArNode>()
+        currentRenderedMappingPoints.forEach {
+            if (newRenderedMappingPoints.contains(it)) {
+                newRenderedMappingPoints.remove(it)
+            } else {
+                it.detachAnchor()
+                it.parent = null
+                it.destroy()
+                mappingPointsToRemove.add(it)
+            }
+        }
+        currentRenderedMappingPoints.removeAll(mappingPointsToRemove)
+        currentRenderedMappingPoints.addAll(newRenderedMappingPoints)
+    }
+
 
     private fun onArFrameWithEarthTracking(earth: Earth) {
         val cameraGeoPose = earth.cameraGeospatialPose
         binding.arLocalizingGeospatialAccVie.updateView(cameraGeoPose)
 
         if (cameraGeoPose.horizontalAccuracy < MIN_HORIZONTAL_ACCURACY) {
-            showCloudAnchorsAsGeospatial(true)
-
             if (arState == NOT_INITIALIZED) {
+                showCloudAnchorsAsGeospatial()
+
                 updateState(RESOLVING_FROM_GEOSPATIAL)
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 resolveAnyOfClosestCloudAnchors()
@@ -272,8 +363,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    private fun showCloudAnchorsAsGeospatial(shouldShow: Boolean) {
-        if (shouldShow && earthNodeList.isEmpty()) {
+    private fun showCloudAnchorsAsGeospatial() {
+        if (earthNodeList.isEmpty()) {
             val mainEarthAnchor = earth!!.createAnchor(floorPlan.mainAnchor.lat, floorPlan.mainAnchor.lng, floorPlan.mainAnchor.alt, 0f, 0f, 0f, 1f)
             val mainEarthNode = ArNode().apply {
                 anchor = mainEarthAnchor
@@ -304,35 +395,38 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 earthNodeList.add(cloudAnchorNode)
                 earthNodeList.add(cloudAnchorNodeArrow)
             }
-        } else if (!shouldShow) {
-            Log.d("O_O", "Removing earth nodes")
-            earthNodeList.forEach {
-                it.detachAnchor()
-                it.parent = null
-                it.destroy()
-            }
-            earthNodeList.clear()
         }
+    }
+
+    private fun removeGeospatialCloudAnchorPreviews() {
+        Log.d(TAG, "Removing all earth nodes")
+        earthNodeList.forEach {
+            it.detachAnchor()
+            it.parent = null
+            it.destroy()
+        }
+        earthNodeList.clear()
     }
 
     private fun resolveAnyOfClosestCloudAnchors(geoPose: GeoPose? = null, floor: Int? = null) {
         val listOfAnchors = if (floor != null) {
-            getAnchorsOnFloor(floor)
+            getAnchorsOnSpecificFloor(floor)
         } else {
             getClosestCloudAnchorIfTooMany(geoPose)
         }
         val listOfAnchorIds = mutableListOf<String>()
         listOfAnchors.forEach { listOfAnchorIds.add(it.cloudAnchorId) }
 
-        val cloudAnchorNode = ArModelNode().apply {
+        currentCloudAnchorNode = ArModelNode().apply {
             position = Position(0f, 0f, 0f)
             parent = sceneView
             resolveCloudAnchorFromIdList(listOfAnchorIds) { anchor: Anchor, success: Boolean ->
                 binding.arLocalizingProgressBar.visibility = View.INVISIBLE
                 if (success) {
-                    showCloudAnchorsAsGeospatial(false)
+                    removeGeospatialCloudAnchorPreviews()
                     this.anchor = anchor
                     setModel(modelMap[AXIS])
+                    currentCloudAnchor = findCloudAnchorFromId(anchor.cloudAnchorId)
                     updateState(TRACKING)
                     bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 } else {
@@ -344,7 +438,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    private fun getAnchorsOnFloor(floor: Int): List<CloudAnchor> {
+    private fun getAnchorsOnSpecificFloor(floor: Int): List<CloudAnchor> {
         val listOfAnchors = mutableListOf<CloudAnchor>()
         floorPlan.cloudAnchorList.forEach {
             if (it.floor == floor) {
@@ -352,10 +446,16 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             }
         }
         return listOfAnchors
-
     }
 
-    //Get list
+    private fun findCloudAnchorFromId(id: String): CloudAnchor? {
+        return if (floorPlan.mainAnchor.cloudAnchorId == id) {
+            floorPlan.mainAnchor
+        } else {
+            floorPlan.cloudAnchorList.find { it.cloudAnchorId == id }
+        }
+    }
+
     private fun getClosestCloudAnchorIfTooMany(geoPose: GeoPose? = null): List<CloudAnchor> {
         val cloudAnchorList = mutableListOf<CloudAnchor>()
         cloudAnchorList.add(floorPlan.mainAnchor)
@@ -421,6 +521,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun updateState(newState: ArLocalizingStates) {
         arState = newState
         binding.arLocalizingProgressBar.visibility = arState.progressBarVisibility
+        if (arState == TRACKING) {
+            binding.arLocalizingBottomSheetTitle.text = getString(R.string.ar_localizing_bottom_sheet_title_tracking)
+        }
     }
 
     private suspend fun loadModels() {
@@ -465,5 +568,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
         private const val MIN_HORIZONTAL_ACCURACY = 2.0
         private const val MAX_SIMULTANEOUS_ANCHORS = 20
+        private const val MAPPING_POINT_RENDER_DISTANCE = 10.0
+        private const val INTERVAL_POSITION_UPDATE = 500L
     }
 }
