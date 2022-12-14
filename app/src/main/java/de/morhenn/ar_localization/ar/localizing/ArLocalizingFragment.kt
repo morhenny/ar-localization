@@ -43,6 +43,7 @@ import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.model.GeoPose
 import de.morhenn.ar_localization.utils.GeoUtils
 import de.morhenn.ar_localization.utils.Utils
+import de.morhenn.ar_localization.utils.Utils.getBitmapFromVectorDrawable
 import de.morhenn.ar_localization.utils.Utils.showFloorPlanOnMap
 import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.ArFrame
@@ -93,6 +94,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var currentRenderedMappingPoints = mutableListOf<ArNode>()
     private var userPositionMarker: Marker? = null
     private var geospatialPositionMarker: Marker? = null
+
+    private var currentResolvedMapMarker: Marker? = null
 
     private var lastPositionUpdate: Long = 0
     private var lastResolveUpdate: Long = 0
@@ -450,9 +453,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     }
                     currentCloudAnchorNode = this
                     currentCloudAnchor = findCloudAnchorFromId(anchor.cloudAnchorId)
+                    updateResolvedMapMarker()
 
                     updateState(TRACKING)
-
                     bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                     Log.d(TAG, "Successfully resolved cloud anchor with id: ${anchor.cloudAnchorId} and name: ${currentCloudAnchor?.text}")
                 } else {
@@ -462,6 +465,12 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 }
             }
         }
+    }
+
+    private fun updateResolvedMapMarker() {
+        currentResolvedMapMarker?.remove()
+        val icon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_outline_flag_24_highlighted, requireContext()))
+        currentResolvedMapMarker = map?.addMarker(MarkerOptions().position(LatLng(currentCloudAnchor!!.lat, currentCloudAnchor!!.lng)).title(currentCloudAnchor!!.cloudAnchorId).icon(icon))
     }
 
     //For debug purposes, to test individual cloud anchors
