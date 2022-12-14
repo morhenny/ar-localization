@@ -25,7 +25,6 @@ enum class ArLocalizingStates(
     RESOLVING_FROM_GEOSPATIAL(progressBarVisibility = VISIBLE),
     RESOLVING_FROM_SELECTED(progressBarVisibility = VISIBLE),
     TRACKING,
-    TRACKING_AND_RESOLVING
 }
 
 enum class ArMappingFabState {
