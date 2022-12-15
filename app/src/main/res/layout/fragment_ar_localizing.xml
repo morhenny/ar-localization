@@ -5,7 +5,7 @@
     android:layout_height="match_parent">
 
     <de.morhenn.ar_localization.ar.GeospatialAccuracyView
-        android:id="@+id/ar_localizing_geospatial_acc_vie"
+        android:id="@+id/ar_localizing_geospatial_acc_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"

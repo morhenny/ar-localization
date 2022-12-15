@@ -174,7 +174,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     private fun onArFrameWithEarthTracking(earth: Earth) {
         val cameraGeoPose = earth.cameraGeospatialPose
-        binding.arLocalizingGeospatialAccVie.updateView(cameraGeoPose)
+        binding.arLocalizingGeospatialAccView.updateView(cameraGeoPose)
 
         if (cameraGeoPose.horizontalAccuracy < MIN_HORIZONTAL_ACCURACY) {
             if (arState == NOT_INITIALIZED) {
@@ -444,6 +444,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 if (success) {
                     lastPositionUpdate = System.currentTimeMillis() //Wait a short moment for the next position update, until the new anchor is fully loaded
                     removeGeospatialCloudAnchorPreviews()
+                    binding.arLocalizingGeospatialAccView.collapsed = true
 
                     this.anchor = anchor
                     setModel(modelMap[AXIS])

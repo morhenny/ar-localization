@@ -136,7 +136,7 @@ class ArMappingFragment : Fragment() {
                 }
                 SCAN_ANCHOR_CIRCLE -> getString(R.string.ar_mapping_instructions_scan_anchor)
                 MAPPING -> getString(R.string.ar_mapping_instructions_mapping)
-                else -> ""
+                else -> null
             }
         }
         earth?.let {
@@ -310,6 +310,7 @@ class ArMappingFragment : Fragment() {
                 }
                 initialAnchorNode = null
                 isInitialAnchorPlaced = false
+                binding.arGeospatialAccuracyView.collapsed = false
             }
             anchorHostingCircle.destroy()
             anchorHostingCircle = AnchorHostingPoint(requireContext(), Filament.engine, sceneView.renderer.filamentScene)
@@ -354,6 +355,7 @@ class ArMappingFragment : Fragment() {
             initialAnchorNode?.let { anchorNode ->
                 anchorNode.hostCloudAnchor(365) { anchor: Anchor, success: Boolean ->
                     if (success) {
+                        binding.arGeospatialAccuracyView.collapsed = true
                         updateState(MAPPING)
                         anchorNode.isVisible = true
 

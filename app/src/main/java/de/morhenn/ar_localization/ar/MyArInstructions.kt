@@ -28,8 +28,13 @@ class MyArInstructions(private val lifecycle: ArSceneLifecycle) : ArSceneLifecyc
 
     var text = infoNode?.text
         set(value) {
-            field = value
-            infoNode?.text = value
+            value?.let {
+                enabled = true
+                field = value
+                infoNode?.text = value
+            } ?: run {
+                enabled = false
+            }
         }
 
     init {
