@@ -18,7 +18,7 @@
 
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:id="@+id/ar_localizing_bottom_sheet"
-        style="@style/AppStandardBottomSheet"
+        style="?attr/bottomSheetStyle"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fitsSystemWindows="false"
@@ -44,6 +44,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginVertical="4dp"
+                app:dividerColor="?attr/colorOnSurface"
                 app:dividerInsetEnd="150dp"
                 app:dividerInsetStart="150dp"
                 app:layout_constraintLeft_toLeftOf="parent"

@@ -24,6 +24,7 @@ import de.morhenn.ar_localization.ar.ArMappingStates
 import de.morhenn.ar_localization.ar.ArMappingStates.*
 import de.morhenn.ar_localization.ar.ModelName
 import de.morhenn.ar_localization.ar.ModelName.*
+import de.morhenn.ar_localization.ar.MyArInstructions
 import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
 import de.morhenn.ar_localization.databinding.FragmentArMappingBinding
 import de.morhenn.ar_localization.floorPlan.FloorPlanViewModel
@@ -34,6 +35,7 @@ import io.github.sceneview.ar.ArSceneView
 import io.github.sceneview.ar.arcore.*
 import io.github.sceneview.ar.node.ArModelNode
 import io.github.sceneview.ar.node.PlacementMode
+import io.github.sceneview.ar.node.infos.TapArPlaneInfoNode
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.toFloat3
 import io.github.sceneview.math.toVector3
@@ -57,6 +59,7 @@ class ArMappingFragment : Fragment() {
     private val viewModelFloorPlan: FloorPlanViewModel by navGraphViewModels(R.id.nav_graph_xml)
 
     private lateinit var sceneView: ArSceneView
+    private lateinit var myArInstructions: MyArInstructions
 
     private var earth: Earth? = null
 
@@ -108,8 +111,10 @@ class ArMappingFragment : Fragment() {
                 config.geospatialMode = Config.GeospatialMode.ENABLED
             }
         }
-
         initializeUIElements()
+        myArInstructions = MyArInstructions(sceneView.lifecycle)
+        myArInstructions.infoNode = TapArPlaneInfoNode(sceneView.lifecycle.context, sceneView.lifecycle)
+        myArInstructions.enabled = false
 
         sceneView.onArFrame = { frame ->
             onArFrame(frame)
@@ -117,6 +122,23 @@ class ArMappingFragment : Fragment() {
     }
 
     private fun onArFrame(frame: ArFrame) {
+        if (frame.isTrackingPlane) {
+            myArInstructions.enabled = true
+            myArInstructions.text = when (arState) {
+                PLACE_ANCHOR -> {
+                    earth?.let {
+                        if (initialAnchorNode == null && it.cameraGeospatialPose.horizontalAccuracy > MIN_HORIZONTAL_GEOSPATIAL_ACCURACY) {
+                            getString(R.string.ar_mapping_instructions_geospatial)
+                        } else {
+                            getString(R.string.ar_mapping_instructions_place_anchor)
+                        }
+                    } ?: getString(R.string.ar_mapping_instructions_place_anchor)
+                }
+                SCAN_ANCHOR_CIRCLE -> getString(R.string.ar_mapping_instructions_scan_anchor)
+                MAPPING -> getString(R.string.ar_mapping_instructions_mapping)
+                else -> ""
+            }
+        }
         earth?.let {
             if (it.trackingState == TrackingState.TRACKING) {
                 onArFrameWithEarthTracking(it)
@@ -521,5 +543,6 @@ class ArMappingFragment : Fragment() {
     companion object {
         private const val TAG = "ArMappingFragment"
         private const val MAPPING_DISTANCE_THRESHOLD = 1 //distance in meters between mapping points
+        private const val MIN_HORIZONTAL_GEOSPATIAL_ACCURACY = 1.5
     }
 }

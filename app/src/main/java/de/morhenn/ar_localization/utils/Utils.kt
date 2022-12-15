@@ -51,6 +51,9 @@ object Utils {
             map.addMarker(MarkerOptions().position(pointLatLng).icon(BitmapDescriptorFactory.fromBitmap(pointIcon)))
         }
         map.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds.build(), padding))
+        if (map.cameraPosition.zoom > 20) {
+            map.moveCamera(CameraUpdateFactory.zoomTo(20f))
+        }
     }
 
     fun hideKeyboard(activity: Activity) {

@@ -124,6 +124,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
         sceneView = binding.sceneViewLocalizing
         sceneView.lightEstimationMode = LightEstimationMode.AMBIENT_INTENSITY
+        sceneView.planeRenderer.isEnabled = false
 
         sceneView.onArSessionCreated = {
             sceneView.configureSession { _, config ->
@@ -190,11 +191,11 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         val cameraPositionRelativeToCurrentAnchor = currentCloudAnchorNode!!.worldToLocalPosition(sceneView.camera.worldPosition.toVector3()).toFloat3()
         val cameraGeoPoseFromAnchor = GeoUtils.getGeoPoseByLocalCoordinateOffset(currentCloudAnchor!!.getGeoPose(), cameraPositionRelativeToCurrentAnchor)
         map?.let { map ->
-            val userIcon = BitmapDescriptorFactory.fromBitmap(Utils.getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_green, requireContext()))
+            val userIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_green, requireContext()))
             userPositionMarker?.remove()
             userPositionMarker = map.addMarker(MarkerOptions().position(cameraGeoPoseFromAnchor.getLatLng()).icon(userIcon))
             earth?.let {
-                val geospatialIcon = BitmapDescriptorFactory.fromBitmap(Utils.getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_red, requireContext()))
+                val geospatialIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_red, requireContext()))
                 geospatialPositionMarker?.remove()
                 val earthLatLng = LatLng(it.cameraGeospatialPose.latitude, it.cameraGeospatialPose.longitude)
                 geospatialPositionMarker = map.addMarker(MarkerOptions().position(earthLatLng).icon(geospatialIcon))

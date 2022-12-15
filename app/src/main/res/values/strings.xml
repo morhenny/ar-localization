@@ -39,5 +39,9 @@
     <string name="sort_by_created">By time created</string>
     <string name="menu_item_search">Search</string>
     <string name="menu_item_sort">Sort</string>
+    <string name="ar_mapping_instructions_geospatial">Scan an area with available street view until all accuracy readings above show green</string>
+    <string name="ar_mapping_instructions_place_anchor">Place anchor on floor</string>
+    <string name="ar_mapping_instructions_scan_anchor">Walk around the anchor for good accuracy until its green</string>
+    <string name="ar_mapping_instructions_mapping">Walk around while pointing your phone around, and place new anchors every few meters</string>
 
 </resources>
