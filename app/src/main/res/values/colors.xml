@@ -7,6 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="grey">#FFCCCCCC</color>
 
     //Geospatial Accuracy View
     <color name="acc_0">#AAFF0000</color>

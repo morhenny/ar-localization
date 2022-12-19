@@ -33,6 +33,7 @@ import de.morhenn.ar_localization.ar.AugmentedRealityViewModel
 import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
+import de.morhenn.ar_localization.utils.FileLog
 import de.morhenn.ar_localization.utils.Utils
 import de.morhenn.ar_localization.utils.Utils.showFloorPlanOnMap
 import kotlinx.coroutines.delay
@@ -95,6 +96,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
 
         viewModelFloorPlan.floorPlans.observe(viewLifecycleOwner) {
             listAdapter.submitList(it)
+            listAdapter.notifyDataSetChanged()
             currentFloorPlans = it
         }
         recyclerView.adapter = listAdapter
@@ -328,5 +330,9 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         map?.clear()
         map = null
         _binding = null
+    }
+
+    companion object {
+        private const val TAG = "FloorPlanListFragment"
     }
 }

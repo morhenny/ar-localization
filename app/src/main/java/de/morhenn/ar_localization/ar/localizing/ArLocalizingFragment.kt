@@ -1,28 +1,30 @@
 package de.morhenn.ar_localization.ar.localizing
 
 import android.annotation.SuppressLint
+import android.location.Location
 import android.net.Uri
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager.LayoutParams
 import android.widget.PopupMenu
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.navGraphViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.gms.location.*
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.GoogleMap.OnIndoorStateChangeListener
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
@@ -41,6 +43,7 @@ import de.morhenn.ar_localization.databinding.FragmentArLocalizingBinding
 import de.morhenn.ar_localization.model.CloudAnchor
 import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.model.GeoPose
+import de.morhenn.ar_localization.utils.DataExport
 import de.morhenn.ar_localization.utils.GeoUtils
 import de.morhenn.ar_localization.utils.Utils
 import de.morhenn.ar_localization.utils.Utils.getBitmapFromVectorDrawable
@@ -100,8 +103,23 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var lastPositionUpdate: Long = 0
     private var lastResolveUpdate: Long = 0
 
+    private var lastLocation: Location? = null
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private var requestingLocationUpdates = false
+    private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, INTERVAL_POSITION_UPDATE).build()
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            locationResult.lastLocation?.let { newLocation ->
+                lastLocation = newLocation
+            }
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentArLocalizingBinding.inflate(inflater, container, false)
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         viewModelAr.floorPlan?.let {
             floorPlan = it
@@ -182,7 +200,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
                 updateState(RESOLVING_FROM_GEOSPATIAL)
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-                resolveAnyOfClosestCloudAnchors()
+                val geoPose = GeoPose(cameraGeoPose.latitude, cameraGeoPose.longitude, cameraGeoPose.altitude, cameraGeoPose.heading)
+                resolveAnyOfClosestCloudAnchors(geoPose)
             }
         }
     }
@@ -204,6 +223,12 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             map.moveCamera(cameraUpdate)
         }
         userPose = cameraGeoPoseFromAnchor
+
+        earth?.let {
+            lastLocation?.let { lastLocation ->
+                DataExport.addLocalizingData(it.cameraGeospatialPose, cameraGeoPoseFromAnchor, lastLocation)
+            }
+        }
     }
 
     private fun updateRenderedMappingPointsList(geoPose: GeoPose) {
@@ -265,7 +290,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                         binding.arLocalizingBottomSheetTitle.text = getString(R.string.ar_localizing_bottom_sheet_title_expanded)
                         binding.arLocalizingBottomSheetMap.layoutParams.height = (bottomSheet.height / 2) - 25
                         binding.arLocalizingBottomSheetCloseButton.visibility = View.VISIBLE
-                        map?.uiSettings?.isIndoorLevelPickerEnabled = false
+                        map?.uiSettings?.isIndoorLevelPickerEnabled = true
                     }
                     else -> {} //NO-OP
                 }
@@ -287,6 +312,19 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
         binding.arLocalizingBottomSheetCloseButton.setOnClickListener {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+        }
+        binding.arLocalizingBottomSheetAutoModeButton.setOnClickListener {
+            if (floorPlan.cloudAnchorList.size < MAX_SIMULTANEOUS_ANCHORS - 1) {
+                Log.d(TAG, "Auto mode button clicked, starting to resolve all anchors simulataneously")
+                binding.arLocalizingBottomSheetAutoModeButton.setBackgroundColor(resources.getColor(R.color.grey, requireContext().theme))
+                //TODO change this to background drawable
+                updateState(RESOLVING_FROM_SELECTED)
+                resolveAnyOfClosestCloudAnchors()
+            } else {
+                Log.d(TAG, "Auto mode button clicked, but too many anchors to be resolved")
+                Toast.makeText(requireContext(), "Too many anchors to automatically resolve all, please select one from the list", Toast.LENGTH_SHORT).show()
+                bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+            }
         }
 
         binding.arLocalizingBottomSheetSearchView.setOnQueryTextListener(
@@ -336,6 +374,27 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 isZoomControlsEnabled = true
                 isZoomGesturesEnabled = false
             }
+            setOnIndoorStateChangeListener(object : OnIndoorStateChangeListener {
+                override fun onIndoorBuildingFocused() {
+                    //NO-OP
+                }
+
+                override fun onIndoorLevelActivated(building: IndoorBuilding) {
+                    val currentIndoorLevel = building.activeLevelIndex
+                    val currentFloor = building.levels[currentIndoorLevel].name
+                    val floorAsInt = currentFloor.toIntOrNull()
+                    if (floorAsInt != null) {
+                        resolveAnyOfClosestCloudAnchors(floor = floorAsInt)
+                    } else {
+                        when (currentFloor) {
+                            "EG", "G" -> resolveAnyOfClosestCloudAnchors(floor = 0)
+                            "UG", "1UG" -> resolveAnyOfClosestCloudAnchors(floor = -1)
+                            "OG", "1OG" -> resolveAnyOfClosestCloudAnchors(floor = 1)
+                            //TODO potentially more exceptions
+                        }
+                    }
+                }
+            })
 
             setOnMapLoadedCallback {
                 showFloorPlanOnMap(floorPlan, this, requireContext())
@@ -351,6 +410,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 true
             }
         }
+        startLocationUpdates()
     }
 
     private fun filterCloudAnchorList(query: String?) {
@@ -368,7 +428,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun findNextCloudAnchorAndResolve() {
         userPose?.let {
             Log.d(TAG, "Cancelling resolve tasks")
-            resolvingArNode?.cancelCloudAnchorResolveTask()
 
             updateState(TRACKING)
 
@@ -437,11 +496,18 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             listOfAnchorIds.remove(it.cloudAnchorId)
         }
 
+        if (listOfAnchorIds.size < 1) {
+            Log.d(TAG, "No anchors to resolve for selected floor $floor or geoPose $geoPose")
+            return
+        }
+
+        resolvingArNode?.cancelCloudAnchorResolveTask()
         resolvingArNode = ArModelNode().apply {
             parent = sceneView
             resolveCloudAnchorFromIdList(listOfAnchorIds) { anchor: Anchor, success: Boolean ->
                 binding.arLocalizingProgressBar.visibility = View.INVISIBLE
                 if (success) {
+                    binding.arLocalizingBottomSheetAutoModeButton.setBackgroundResource(android.R.drawable.btn_default)
                     lastPositionUpdate = System.currentTimeMillis() //Wait a short moment for the next position update, until the new anchor is fully loaded
                     removeGeospatialCloudAnchorPreviews()
                     binding.arLocalizingGeospatialAccView.collapsed = true
@@ -507,7 +573,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun getAnchorsOnSpecificFloor(floor: Int): List<CloudAnchor> {
         val listOfAnchors = mutableListOf<CloudAnchor>()
         floorPlan.cloudAnchorList.forEach {
-            if (it.floor == floor) {
+            if (it.floor == floor && listOfAnchors.size < MAX_SIMULTANEOUS_ANCHORS - 1) {
                 listOfAnchors.add(it)
             }
         }
@@ -616,11 +682,41 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             .await(lifecycle)
     }
 
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        requestingLocationUpdates = true
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+    }
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopLocationUpdates()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (requestingLocationUpdates) {
+            startLocationUpdates()
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
-        map?.clear()
+        map?.let {
+            it.isIndoorEnabled = false
+            it.clear()
+        }
         map = null
         _binding = null
+    }
+
+    override fun onStop() {
+        super.onStop()
+        DataExport.finishLocalizingFile()
     }
 
     override fun onDestroy() {
@@ -636,7 +732,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         private const val MIN_HORIZONTAL_ACCURACY = 2.0
         private const val MAX_SIMULTANEOUS_ANCHORS = 20
         private const val MAPPING_POINT_RENDER_DISTANCE = 10.0
-        private const val INTERVAL_POSITION_UPDATE = 500L
+        private const val INTERVAL_POSITION_UPDATE = 750L
         private const val INTERVAL_RESOLVE_UPDATE = 10000L
     }
 }

@@ -29,6 +29,7 @@ import de.morhenn.ar_localization.databinding.DialogNewAnchorBinding
 import de.morhenn.ar_localization.databinding.FragmentArMappingBinding
 import de.morhenn.ar_localization.floorPlan.FloorPlanViewModel
 import de.morhenn.ar_localization.model.*
+import de.morhenn.ar_localization.utils.DataExport
 import de.morhenn.ar_localization.utils.GeoUtils
 import io.github.sceneview.Filament
 import io.github.sceneview.ar.ArSceneView
@@ -115,6 +116,9 @@ class ArMappingFragment : Fragment() {
         myArInstructions = MyArInstructions(sceneView.lifecycle)
         myArInstructions.infoNode = TapArPlaneInfoNode(sceneView.lifecycle.context, sceneView.lifecycle)
         myArInstructions.enabled = false
+
+        DataExport.startNewMappingFile(viewModelFloorPlan.nameForNewFloorPlan)
+        Log.d(TAG, "Called start new mapping file with name: ${viewModelFloorPlan.nameForNewFloorPlan}")
 
         sceneView.onArFrame = { frame ->
             onArFrame(frame)
@@ -262,6 +266,7 @@ class ArMappingFragment : Fragment() {
                 it.info = viewModelFloorPlan.infoForNewFloorPlan
                 it.ownerUID = viewModelFloorPlan.ownerUID
                 addRemainingMappingPointsToFloorPlan()
+                DataExport.finishMappingFile()
                 viewModelFloorPlan.addFloorPlan(it)
                 withContext(Dispatchers.Main) {
                     findNavController().popBackStack()
@@ -450,6 +455,7 @@ class ArMappingFragment : Fragment() {
         floorPlan?.let { floorPlan ->
             //Use offset to last placed anchor to calculate latLng and relative x,y,z to the initial Anchor, using the lastAnchors values
             val lastAnchor = if (listOfAnchorNodes.isEmpty()) {
+                DataExport.addMappingAnchor(floorPlan.mainAnchor)
                 Pair(floorPlan.mainAnchor, initialAnchorNode!!)
             } else {
                 Pair(floorPlan.cloudAnchorList.last(), listOfAnchorNodes.last())
@@ -467,6 +473,8 @@ class ArMappingFragment : Fragment() {
 
             addMappingPointsAndClearList(lastAnchor.first)
             floorPlan.cloudAnchorList.add(newAnchor)
+
+            DataExport.addMappingAnchor(newAnchor)
         }
     }
 
@@ -489,6 +497,7 @@ class ArMappingFragment : Fragment() {
             val point = MappingPoint(x, y, z)
             floorPlan!!.mappingPointList.add(point)
             it.parent = null //Remove the mappingPoint from the rendered scene
+            DataExport.appendMappingPointData(GeoUtils.getGeoPoseByLocalCoordinateOffset(initialGeoPose!!, Position(x, y, z)))
         }
         listOfMappingPoints.clear()
     }
