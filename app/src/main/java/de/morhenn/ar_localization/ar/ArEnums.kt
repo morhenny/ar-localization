@@ -22,9 +22,17 @@ enum class ArLocalizingStates(
     val progressBarVisibility: Int = INVISIBLE,
 ) {
     NOT_INITIALIZED,
-    RESOLVING_FROM_GEOSPATIAL(progressBarVisibility = VISIBLE),
-    RESOLVING_FROM_SELECTED(progressBarVisibility = VISIBLE),
+    RESOLVING(progressBarVisibility = VISIBLE),
     TRACKING,
+}
+
+enum class ArResolveModes(
+) {
+    AUTO,
+    GEOSPATIAL,
+    FLOOR,
+    ANCHOR,
+    NONE,
 }
 
 enum class ArMappingFabState {
