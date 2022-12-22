@@ -1,7 +1,6 @@
 package de.morhenn.ar_localization.ar
 
-import android.view.View.INVISIBLE
-import android.view.View.VISIBLE
+import android.view.View.*
 
 enum class ArMappingStates(
     val progressBarVisibility: Int = INVISIBLE,
@@ -20,10 +19,11 @@ enum class ArMappingStates(
 
 enum class ArLocalizingStates(
     val progressBarVisibility: Int = INVISIBLE,
+    val cancelButtonVisibility: Int = GONE,
 ) {
-    NOT_INITIALIZED,
-    RESOLVING(progressBarVisibility = VISIBLE),
-    TRACKING,
+    NOT_INITIALIZED(cancelButtonVisibility = GONE),
+    RESOLVING(progressBarVisibility = VISIBLE, cancelButtonVisibility = VISIBLE),
+    TRACKING(cancelButtonVisibility = GONE),
 }
 
 enum class ArResolveModes(

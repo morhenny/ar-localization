@@ -67,7 +67,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="16dp"
-                android:layout_marginTop="4dp"
                 android:background="@drawable/icon_button"
                 android:padding="4dp"
                 android:src="@drawable/ic_baseline_auto_mode_24"
@@ -80,11 +79,33 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="16dp"
-                android:layout_marginTop="4dp"
                 android:background="@drawable/icon_button"
                 android:padding="4dp"
                 android:src="@drawable/ic_baseline_location_city_24"
                 app:layout_constraintLeft_toRightOf="@id/ar_localizing_bottom_sheet_auto_mode_button"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_divider" />
+
+            <ImageButton
+                android:id="@+id/ar_localizing_bottom_sheet_cancel_resolve_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="16dp"
+                android:background="@drawable/icon_button"
+                android:padding="4dp"
+                android:src="@drawable/ic_outline_cancel_24"
+                android:visibility="gone"
+                app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_select_floor_button"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_divider" />
+
+            <ImageButton
+                android:id="@+id/ar_localizing_bottom_sheet_select_floor_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="16dp"
+                android:background="@drawable/icon_button"
+                android:padding="4dp"
+                android:src="@drawable/ic_baseline_altitude_24px"
+                app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_select_anchor_button"
                 app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_divider" />
 
             <ImageButton
@@ -99,23 +120,12 @@
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_divider" />
 
-            <ImageButton
-                android:id="@+id/ar_localizing_bottom_sheet_select_floor_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginRight="16dp"
-                android:background="@drawable/icon_button"
-                android:padding="4dp"
-                android:src="@drawable/ic_baseline_altitude_24px"
-                app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_select_anchor_button"
-                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_divider" />
-
             <TextView
                 android:id="@+id/ar_localizing_bottom_sheet_currently_resolved"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAlignment="center"
-                android:textSize="12sp"
+                android:textSize="14sp"
                 app:layout_constraintBottom_toTopOf="@id/ar_localizing_bottom_sheet_edit_layout_while_tracking"
                 app:layout_constraintLeft_toRightOf="@id/ar_localizing_bottom_sheet_geospatial_toggle_button"
                 app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_select_floor_button"
@@ -129,11 +139,30 @@
                 android:hint="@string/hint_configure_simultaneous_resolves_while_tracking"
                 android:visibility="gone"
                 app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_edit_layout_on_selection"
+                app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_edit_layout_tracking_interval"
                 app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_auto_mode_button">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/ar_localizing_bottom_sheet_edit_resolve_tracking"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:imeOptions="actionDone"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/ar_localizing_bottom_sheet_edit_layout_tracking_interval"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="4dp"
+                android:hint="@string/hint_configure_tracking_interval"
+                android:visibility="gone"
+                app:layout_constraintLeft_toRightOf="@id/ar_localizing_bottom_sheet_edit_layout_while_tracking"
+                app:layout_constraintRight_toLeftOf="@id/ar_localizing_bottom_sheet_edit_layout_on_selection"
+                app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_auto_mode_button">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/ar_localizing_bottom_sheet_edit_tracking_interval"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:imeOptions="actionDone"
@@ -148,7 +177,7 @@
                 android:layout_marginHorizontal="4dp"
                 android:hint="@string/hint_configure_simultaneous_resolves_on_selection"
                 android:visibility="gone"
-                app:layout_constraintLeft_toRightOf="@id/ar_localizing_bottom_sheet_edit_layout_while_tracking"
+                app:layout_constraintLeft_toRightOf="@id/ar_localizing_bottom_sheet_edit_layout_tracking_interval"
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_auto_mode_button">
 
@@ -178,7 +207,7 @@
                 android:paddingHorizontal="8dp"
                 android:paddingTop="8dp"
                 android:paddingBottom="4dp"
-                android:text="List of available anchors:"
+                android:text="@string/ar_localization_anchor_list_title"
                 android:textSize="20sp"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/ar_localizing_bottom_sheet_map" />

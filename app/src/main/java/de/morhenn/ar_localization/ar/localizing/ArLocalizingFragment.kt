@@ -97,7 +97,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var modelMap: EnumMap<ModelName, Renderable> = EnumMap(ModelName::class.java)
 
     private lateinit var floorPlan: FloorPlan
-    private var filteredCloudAnchorList = listOf<CloudAnchor>()
+    private var filteredCloudAnchorList = mutableListOf<CloudAnchor>()
     private var currentFilter = ""
 
     private lateinit var anchorRecyclerView: RecyclerView
@@ -125,8 +125,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var lastPositionUpdate: Long = 0
     private var lastResolveUpdate: Long = 0
 
-    private var maxResolvingAmountWhileTracking = 20
+    private var maxResolvingAmountWhileTracking = 5
     private var maxResolvingAmountOnSelected = MAX_SIMULTANEOUS_ANCHORS
+    private var trackingResolveInterval = INTERVAL_RESOLVE_UPDATE
 
     private var lastLocation: Location? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
@@ -156,7 +157,11 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
         viewModelAr.floorPlan?.let {
             floorPlan = it
-            filteredCloudAnchorList = it.cloudAnchorList
+            filteredCloudAnchorList.apply {
+                clear()
+                add(floorPlan.mainAnchor)
+                addAll(floorPlan.cloudAnchorList)
+            }
         } ?: run {
             Log.e(TAG, "No floor plan found in arLocalizing, something went really wrong")
             findNavController().popBackStack()
@@ -205,7 +210,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
         if (arState == TRACKING) {
             val currentMillis = System.currentTimeMillis()
-            if (currentMillis - lastResolveUpdate > INTERVAL_RESOLVE_UPDATE) {
+            if (currentMillis - lastResolveUpdate > trackingResolveInterval) {
                 lastResolveUpdate = currentMillis
                 findNextCloudAnchorAndResolve()
             }
@@ -232,7 +237,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 showCloudAnchorsAsGeospatial()
 
                 updateState(RESOLVING)
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                 val geoPose = GeoPose(cameraGeoPose.latitude, cameraGeoPose.longitude, cameraGeoPose.altitude, cameraGeoPose.heading)
                 resolveAnyOfClosestCloudAnchors(geoPose)
             }
@@ -314,14 +318,17 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                             it.setDisplayHomeAsUpEnabled(false)
                             it.setHomeAsUpIndicator(R.drawable.ic_baseline_close_24)
                         }
-                        binding.arLocalizingBottomSheetEditLayoutWhileTracking.visibility = View.GONE
-                        binding.arLocalizingBottomSheetEditLayoutOnSelection.visibility = View.GONE
-                        binding.arLocalizingBottomSheetTitle.text = when (arState) {
-                            TRACKING -> getString(R.string.ar_localizing_bottom_sheet_title_tracking, currentCloudAnchor?.text)
-                            RESOLVING -> getString(R.string.ar_localizing_bottom_sheet_title_resolving)
-                            else -> getString(R.string.ar_localizing_bottom_sheet_title_collapsed)
+                        with(binding) {
+                            arLocalizingBottomSheetEditLayoutWhileTracking.visibility = View.GONE
+                            arLocalizingBottomSheetEditLayoutOnSelection.visibility = View.GONE
+                            arLocalizingBottomSheetEditLayoutTrackingInterval.visibility = View.GONE
+                            arLocalizingBottomSheetTitle.text = when (arState) {
+                                TRACKING -> getString(R.string.ar_localizing_bottom_sheet_title_tracking, currentCloudAnchor?.text)
+                                RESOLVING -> getString(R.string.ar_localizing_bottom_sheet_title_resolving)
+                                else -> getString(R.string.ar_localizing_bottom_sheet_title_collapsed)
+                            }
+                            arLocalizingBottomSheetMap.layoutParams.height = collapsedHeight
                         }
-                        binding.arLocalizingBottomSheetMap.layoutParams.height = collapsedHeight
                         map?.uiSettings?.isIndoorLevelPickerEnabled = false
                     }
                     BottomSheetBehavior.STATE_EXPANDED -> {
@@ -329,10 +336,13 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                             it.setDisplayHomeAsUpEnabled(true)
                             it.setHomeAsUpIndicator(R.drawable.ic_baseline_close_24)
                         }
-                        binding.arLocalizingBottomSheetEditLayoutWhileTracking.visibility = View.VISIBLE
-                        binding.arLocalizingBottomSheetEditLayoutOnSelection.visibility = View.VISIBLE
-                        binding.arLocalizingBottomSheetTitle.text = getString(R.string.ar_localizing_bottom_sheet_title_expanded)
-                        binding.arLocalizingBottomSheetMap.layoutParams.height = (bottomSheet.height / 2) - 25
+                        with(binding) {
+                            arLocalizingBottomSheetEditLayoutWhileTracking.visibility = View.VISIBLE
+                            arLocalizingBottomSheetEditLayoutOnSelection.visibility = View.VISIBLE
+                            arLocalizingBottomSheetEditLayoutTrackingInterval.visibility = View.VISIBLE
+                            arLocalizingBottomSheetTitle.text = getString(R.string.ar_localizing_bottom_sheet_title_expanded)
+                            arLocalizingBottomSheetMap.layoutParams.height = (bottomSheet.height / 2) - 25
+                        }
                         map?.uiSettings?.isIndoorLevelPickerEnabled = true
                     }
                     else -> {} //NO-OP
@@ -353,86 +363,115 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
         anchorRecyclerView.adapter = anchorListAdapter
 
-        binding.arLocalizingBottomSheetAutoModeButton.setOnClickListener {
-            if (floorPlan.cloudAnchorList.size < maxResolvingAmountOnSelected - 1) {
-                Log.d(TAG, "Auto mode button clicked, starting to resolve all anchors simulataneously")
+        with(binding) {
+            arLocalizingBottomSheetAutoModeButton.setOnClickListener {
+                if (arState == NOT_INITIALIZED || arState == RESOLVING) {
+                    if (floorPlan.cloudAnchorList.size < maxResolvingAmountOnSelected - 1) {
+                        Log.d(TAG, "Auto mode button clicked, starting to resolve all anchors simulataneously")
 
-                updateResolveButtons(AUTO)
-                updateState(RESOLVING)
+                        updateResolveButtons(AUTO)
+                        updateState(RESOLVING)
 
-                resolveAnyOfClosestCloudAnchors()
-            } else {
-                Log.d(TAG, "Auto mode button clicked, but too many anchors to be resolved")
-                Toast.makeText(requireContext(), "Too many anchors to automatically resolve all, please select one from the list", Toast.LENGTH_SHORT).show()
+                        resolveAnyOfClosestCloudAnchors()
+                    } else {
+                        Log.d(TAG, "Auto mode button clicked, but too many anchors to be resolved")
+                        Toast.makeText(requireContext(), "Too many anchors to automatically resolve all, please select one from the list", Toast.LENGTH_SHORT).show()
+                        //TODO move info from toast
+                        bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                        val anim = AlphaAnimation(0.2f, 1.0f).apply {
+                            duration = 400
+                            startOffset = 50
+                            repeatMode = Animation.REVERSE
+                            repeatCount = 2
+                        }
+                        binding.arLocalizingBottomSheetListDescription.startAnimation(anim)
+                    }
+                }
+            }
+
+            arLocalizingBottomSheetSearchView.setOnQueryTextListener(
+                object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
+                    override fun onQueryTextSubmit(query: String?): Boolean {
+                        filterCloudAnchorList(query)
+                        Utils.hideKeyboard(requireActivity())
+                        return true
+                    }
+
+                    override fun onQueryTextChange(newText: String?): Boolean {
+                        filterCloudAnchorList(newText)
+                        return true
+                    }
+                })
+            arLocalizingBottomSheetSearchViewSortButton.setOnClickListener { view ->
+                val popup = PopupMenu(requireContext(), view)
+                val inflater = popup.menuInflater
+                inflater.inflate(R.menu.cloud_anchor_sort_menu, popup.menu)
+                popup.setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        R.id.sort_by_floor -> {
+                            anchorListAdapter.submitList(filteredCloudAnchorList.sortedBy { it.floor })
+                            true
+                        }
+                        R.id.sort_by_name -> {
+                            anchorListAdapter.submitList(filteredCloudAnchorList.sortedBy { it.text })
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                popup.show()
+            }
+
+            arLocalizingBottomSheetSelectAnchorButton.setOnClickListener {
                 bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
+                val anim = AlphaAnimation(0.2f, 1.0f).apply {
+                    duration = 400
+                    startOffset = 50
+                    repeatMode = Animation.REVERSE
+                    repeatCount = 2
+                }
+                binding.arLocalizingBottomSheetListDescription.startAnimation(anim)
             }
-        }
-
-        binding.arLocalizingBottomSheetSearchView.setOnQueryTextListener(
-            object : androidx.appcompat.widget.SearchView.OnQueryTextListener {
-                override fun onQueryTextSubmit(query: String?): Boolean {
-                    filterCloudAnchorList(query)
-                    Utils.hideKeyboard(requireActivity())
-                    return true
+            arLocalizingBottomSheetSelectFloorButton.setOnClickListener {
+                showFloorSelectionDialog()
+            }
+            arLocalizingBottomSheetGeospatialToggleButton.apply {
+                isSelected = true
+                setOnClickListener {
+                    geospatialEnabled = !geospatialEnabled
                 }
-
-                override fun onQueryTextChange(newText: String?): Boolean {
-                    filterCloudAnchorList(newText)
-                    return true
-                }
-            })
-        binding.arLocalizingBottomSheetSearchViewSortButton.setOnClickListener { view ->
-            val popup = PopupMenu(requireContext(), view)
-            val inflater = popup.menuInflater
-            inflater.inflate(R.menu.cloud_anchor_sort_menu, popup.menu)
-            popup.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    R.id.sort_by_floor -> {
-                        anchorListAdapter.submitList(filteredCloudAnchorList.sortedBy { it.floor })
-                        true
+            }
+            arLocalizingBottomSheetEditResolveAroundSelected.apply {
+                setText(maxResolvingAmountOnSelected.toString())
+                doOnTextChanged { text, start, before, count ->
+                    if (text.toString().isNotEmpty()) {
+                        maxResolvingAmountOnSelected = text.toString().toInt()
                     }
-                    R.id.sort_by_name -> {
-                        anchorListAdapter.submitList(filteredCloudAnchorList.sortedBy { it.text })
-                        true
+                }
+            }
+            arLocalizingBottomSheetEditResolveTracking.apply {
+                setText(maxResolvingAmountWhileTracking.toString())
+                doOnTextChanged { text, start, before, count ->
+                    if (text.toString().isNotEmpty()) {
+                        maxResolvingAmountWhileTracking = text.toString().toInt()
                     }
-                    else -> false
                 }
             }
-            popup.show()
-        }
-
-        binding.arLocalizingBottomSheetSelectAnchorButton.setOnClickListener {
-            bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-            val anim = AlphaAnimation(0.2f, 1.0f).apply {
-                duration = 400
-                startOffset = 50
-                repeatMode = Animation.REVERSE
-                repeatCount = 2
-            }
-            binding.arLocalizingBottomSheetListDescription.startAnimation(anim)
-        }
-        binding.arLocalizingBottomSheetSelectFloorButton.setOnClickListener {
-            showFloorSelectionDialog()
-        }
-        binding.arLocalizingBottomSheetGeospatialToggleButton.apply {
-            isSelected = true
-            setOnClickListener {
-                geospatialEnabled = !geospatialEnabled
-            }
-        }
-        binding.arLocalizingBottomSheetEditResolveAroundSelected.apply {
-            setText(maxResolvingAmountOnSelected.toString())
-            doOnTextChanged { text, start, before, count ->
-                if (text.toString().isNotEmpty()) {
-                    maxResolvingAmountOnSelected = text.toString().toInt()
+            arLocalizingBottomSheetEditTrackingInterval.apply {
+                setText(trackingResolveInterval.toString())
+                doOnTextChanged { text, start, before, count ->
+                    if (text.toString().isNotEmpty()) {
+                        trackingResolveInterval = text.toString().toLong()
+                    }
                 }
             }
-        }
-        binding.arLocalizingBottomSheetEditResolveTracking.apply {
-            setText(maxResolvingAmountWhileTracking.toString())
-            doOnTextChanged { text, start, before, count ->
-                if (text.toString().isNotEmpty()) {
-                    maxResolvingAmountWhileTracking = text.toString().toInt()
+            arLocalizingBottomSheetCancelResolveButton.setOnClickListener {
+                if (arState == RESOLVING) {
+                    Log.d(TAG, "Cancel resolve button clicked, cancelling all resolves")
+                    resolvingArNode?.cancelCloudAnchorResolveTask()
+                    updateResolveButtons(NONE)
+                    updateState(NOT_INITIALIZED)
+                    anchorListAdapter.indicateResolving(mutableListOf())
                 }
             }
         }
@@ -492,14 +531,20 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     private fun filterCloudAnchorList(query: String?) {
         currentFilter = query ?: ""
-        filteredCloudAnchorList = if (currentFilter.isNotEmpty()) {
-            floorPlan.cloudAnchorList.filter {
+        filteredCloudAnchorList.clear()
+        if (currentFilter.isNotEmpty()) {
+            filteredCloudAnchorList.addAll(floorPlan.cloudAnchorList.filter {
                 it.text.contains(currentFilter, true)
+            })
+            if (floorPlan.mainAnchor.text.contains(currentFilter, true)) {
+                filteredCloudAnchorList.add(floorPlan.mainAnchor)
             }
         } else {
-            floorPlan.cloudAnchorList
+            filteredCloudAnchorList.addAll(floorPlan.cloudAnchorList)
+            filteredCloudAnchorList.add(floorPlan.mainAnchor)
         }
         anchorListAdapter.submitList(filteredCloudAnchorList)
+        anchorListAdapter.notifyDataSetChanged()
     }
 
     private fun findNextCloudAnchorAndResolve() {
@@ -580,6 +625,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
 
         resolvingArNode?.cancelCloudAnchorResolveTask()
+        anchorListAdapter.indicateResolving(listOfAnchorIds)
         resolvingArNode = ArModelNode().apply {
             parent = sceneView
             resolveCloudAnchorFromIdList(listOfAnchorIds) { anchor: Anchor, success: Boolean ->
@@ -589,7 +635,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
                     lastPositionUpdate = System.currentTimeMillis() //Wait a short moment for the next position update, until the new anchor is fully loaded
                     removeGeospatialCloudAnchorPreviews()
-                    if (arState != TRACKING) binding.arLocalizingGeospatialAccView.collapsed = true
 
                     this.anchor = anchor
                     setModel(modelMap[AXIS])
@@ -599,12 +644,16 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                         it.destroy()
                     }
                     currentCloudAnchorNode = this
-                    currentCloudAnchor = findCloudAnchorFromId(anchor.cloudAnchorId)
+                    findCloudAnchorFromId(anchor.cloudAnchorId)?.let {
+                        currentCloudAnchor = it
+                        filteredCloudAnchorList.remove(it)
+                        filteredCloudAnchorList.add(0, it)
+                        anchorListAdapter.indicateResolved(it)
+                    }
                     binding.arLocalizingBottomSheetCurrentlyResolved.text = getString(R.string.ar_localizing_currently_resolved, currentCloudAnchor?.text)
                     updateResolvedMapMarker()
 
                     updateState(TRACKING)
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
                     Log.d(TAG, "Successfully resolved cloud anchor with id: ${anchor.cloudAnchorId} and name: ${currentCloudAnchor?.text}")
                 } else {
                     if (arState != TRACKING) {
@@ -619,36 +668,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         currentResolvedMapMarker?.remove()
         val icon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_outline_flag_24_highlighted, requireContext()))
         currentResolvedMapMarker = map?.addMarker(MarkerOptions().position(LatLng(currentCloudAnchor!!.lat, currentCloudAnchor!!.lng)).title(currentCloudAnchor!!.cloudAnchorId).icon(icon))
-    }
-
-    //For debug purposes, to test individual cloud anchors
-    private fun resolveSelectedCloudAnchor(cloudAnchor: CloudAnchor) {
-        Log.d(TAG, "Trying to resolve selected cloud anchor")
-        resolvingArNode = ArModelNode().apply {
-            position = Position(0f, 0f, 0f)
-            parent = sceneView
-            resolveCloudAnchor(cloudAnchor.cloudAnchorId) { anchor, success ->
-                updateResolveButtons(NONE)
-                if (success) {
-                    this.anchor = anchor
-                    setModel(modelMap[AXIS])
-                    currentCloudAnchorNode?.let {
-                        it.parent = null
-                        it.detachAnchor()
-                        it.destroy()
-                    }
-                    currentCloudAnchorNode = this
-                    currentCloudAnchor = cloudAnchor
-                    updateState(TRACKING)
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-                    Log.d(TAG, "Successfully resolved cloud anchor with id: ${anchor.cloudAnchorId} and name: ${currentCloudAnchor?.text}")
-                } else {
-                    if (arState != TRACKING) {
-                        updateState(NOT_INITIALIZED)
-                    }
-                }
-            }
-        }
     }
 
     private fun findCloudAnchorFromId(id: String): CloudAnchor? {
@@ -670,9 +689,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun getClosestCloudAnchorIfTooMany(geoPose: GeoPose? = null): List<CloudAnchor> {
-        val cloudAnchorList = mutableListOf<CloudAnchor>()
-        cloudAnchorList.add(floorPlan.mainAnchor)
-
         val lat: Double
         val lng: Double
         val alt: Double
@@ -687,24 +703,33 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             alt = cameraGeoPose.altitude
         }
 
-        val tempCloudAnchorList = floorPlan.cloudAnchorList
+        val tempCloudAnchorList = mutableListOf<CloudAnchor>().apply {
+            addAll(floorPlan.cloudAnchorList)
+            add(floorPlan.mainAnchor)
+        }
 
         while (tempCloudAnchorList.size > maxResolvingAmountOnSelected - 1) {
             tempCloudAnchorList.remove(tempCloudAnchorList.maxBy {
                 GeoUtils.distanceBetweenTwoWorldCoordinates(lat, lng, alt, it.lat, it.lng, it.alt)
             })
         }
-
-        cloudAnchorList.addAll(tempCloudAnchorList)
-
-        return cloudAnchorList
+        return tempCloudAnchorList
     }
 
     private fun getAnchorsToResolveWhileTracking(): List<CloudAnchor> {
+        val tempCloudAnchorList = mutableListOf<CloudAnchor>()
+        tempCloudAnchorList.add(floorPlan.mainAnchor)
+        tempCloudAnchorList.addAll(floorPlan.cloudAnchorList)
 
-        //TODO implement smart algorithm to resolve only the "next" anchors and use maxResolvingAmountWhileTracking
-
-        return getClosestCloudAnchorIfTooMany(currentCloudAnchor?.getGeoPose())
+        userPose?.let { user ->
+            while (tempCloudAnchorList.size > maxResolvingAmountWhileTracking - 1) {
+                tempCloudAnchorList.remove(tempCloudAnchorList.maxBy {
+                    GeoUtils.distanceBetweenTwoWorldCoordinates(user.latitude, user.longitude, user.altitude, it.lat, it.lng, it.alt)
+                })
+            }
+        }
+        binding.arLocalizingProgressBar.visibility = View.VISIBLE
+        return tempCloudAnchorList
     }
 
     private fun onClickCloudAnchorItem(cloudAnchor: CloudAnchor) {
@@ -713,7 +738,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             updateResolveButtons(ANCHOR)
             updateState(RESOLVING)
             resolveAnyOfClosestCloudAnchors(GeoPose(cloudAnchor.lat, cloudAnchor.lng, cloudAnchor.alt, 0.0))
-            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
         } else if (arState == TRACKING) {
             //TODO navigation?
         }
@@ -746,7 +770,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun onClickFloorItem(floor: Int, dialog: Dialog) {
         Log.d(TAG, "Clicked on floor: $floor")
         dialog.dismiss()
-        updateResolveButtons(FLOOR)
         map?.let { map ->
             map.focusedBuilding?.let { building ->
                 building.levels.find { it.shortName == floor.toString() }?.activate() ?: run {
@@ -761,7 +784,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 }
             }
         }
-        if (arState == NOT_INITIALIZED) {
+        if (arState != TRACKING) {
+            updateResolveButtons(FLOOR)
             updateState(RESOLVING)
             resolveAnyOfClosestCloudAnchors(floor = floor)
         }
@@ -793,6 +817,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun updateState(newState: ArLocalizingStates) {
         arState = newState
         binding.arLocalizingProgressBar.visibility = arState.progressBarVisibility
+        binding.arLocalizingBottomSheetCancelResolveButton.visibility = arState.cancelButtonVisibility
         if (arState == TRACKING) {
             binding.arLocalizingBottomSheetTitle.text = getString(R.string.ar_localizing_bottom_sheet_title_tracking, currentCloudAnchor?.text)
         }
@@ -873,6 +898,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         private const val MAX_SIMULTANEOUS_ANCHORS = 40
         private const val MAPPING_POINT_RENDER_DISTANCE = 10.0
         private const val INTERVAL_POSITION_UPDATE = 750L
-        private const val INTERVAL_RESOLVE_UPDATE = 10000L
+        private const val INTERVAL_RESOLVE_UPDATE = 5000L
     }
 }

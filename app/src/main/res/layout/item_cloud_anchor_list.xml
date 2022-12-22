@@ -21,6 +21,29 @@
             android:textStyle="bold"
             card_view:layout_constraintBottom_toBottomOf="parent"
             card_view:layout_constraintLeft_toLeftOf="parent"
+            card_view:layout_constraintRight_toLeftOf="@id/cloud_anchor_list_item_progress_indicator"
+            card_view:layout_constraintTop_toTopOf="parent" />
+
+        <ProgressBar
+            android:id="@+id/cloud_anchor_list_item_progress_indicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginHorizontal="12dp"
+            android:indeterminate="true"
+            android:visibility="gone"
+            card_view:layout_constraintBottom_toBottomOf="parent"
+            card_view:layout_constraintRight_toLeftOf="@id/cloud_anchor_list_floor_icon"
+            card_view:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/cloud_anchor_list_item_resolved_indicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginHorizontal="12dp"
+            android:indeterminate="true"
+            android:src="@drawable/ic_outline_check_circle_24"
+            android:visibility="gone"
+            card_view:layout_constraintBottom_toBottomOf="parent"
             card_view:layout_constraintRight_toLeftOf="@id/cloud_anchor_list_floor_icon"
             card_view:layout_constraintTop_toTopOf="parent" />
 

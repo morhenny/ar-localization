@@ -45,7 +45,9 @@
     <string name="ar_mapping_instructions_mapping">Walk around while pointing your phone around, and place new anchors every few meters</string>
     <string name="hint_configure_simultaneous_resolves_while_tracking"># Tracking resolves</string>
     <string name="hint_configure_simultaneous_resolves_on_selection"># Selection resolves</string>
-    <string name="ar_localizing_currently_resolved">Resolved: %1$s</string>
+    <string name="ar_localizing_currently_resolved">TRACKING: %1$s</string>
     <string name="select_floor_dialog_title">Select Floor to resolve</string>
+    <string name="ar_localization_anchor_list_title">Tap on anchor to resolve:</string>
+    <string name="hint_configure_tracking_interval">Tracking Interval</string>
 
 </resources>
