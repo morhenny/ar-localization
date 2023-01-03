@@ -49,5 +49,7 @@
     <string name="select_floor_dialog_title">Select Floor to resolve</string>
     <string name="ar_localization_anchor_list_title">Tap on anchor to resolve:</string>
     <string name="hint_configure_tracking_interval">Tracking Interval</string>
+    <string name="dialog_delete_floor_plan_title">Delete floor plan</string>
+    <string name="dialog_delete_floor_plan_message">Are you sure you want to delete this floor plan?</string>
 
 </resources>

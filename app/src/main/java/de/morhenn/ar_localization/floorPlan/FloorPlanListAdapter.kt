@@ -5,8 +5,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -15,29 +13,17 @@ import com.google.firebase.ktx.Firebase
 import de.morhenn.ar_localization.R
 import de.morhenn.ar_localization.databinding.ItemFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
-import de.morhenn.ar_localization.utils.SimpleEvent
 
-class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewHolder>(FloorPlanDiffCallback) {
+class FloorPlanListAdapter(
+    val onDeleteItem: (item: FloorPlan) -> Unit,
+    val onUpdateItem: (item: FloorPlan) -> Unit,
+    val onLocalizeItem: (item: FloorPlan) -> Unit,
+    val onSelectItem: () -> Unit,
+) : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewHolder>(FloorPlanDiffCallback) {
 
     var expandedPosition = -1
 
     var currentLocation: Location? = null
-
-    private val _selectedFloorPlanChanged = MutableLiveData<SimpleEvent>()
-    val selectedFloorPlanChanged: LiveData<SimpleEvent>
-        get() = _selectedFloorPlanChanged
-
-    private val _deleteSelectedFloorPlan = MutableLiveData<SimpleEvent>()
-    val deleteSelectedFloorPlan: LiveData<SimpleEvent>
-        get() = _deleteSelectedFloorPlan
-
-    private val _updateSelectedFloorPlan = MutableLiveData<SimpleEvent>()
-    val updateSelectedFloorPlan: LiveData<SimpleEvent>
-        get() = _updateSelectedFloorPlan
-
-    private val _localizeSelectedFloorPlan = MutableLiveData<SimpleEvent>()
-    val localizeSelectedFloorPlan: LiveData<SimpleEvent>
-        get() = _localizeSelectedFloorPlan
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding = ItemFloorPlanListBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -58,7 +44,7 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
             expandedPosition = if (lastPos == position) {
                 -1
             } else position
-            _selectedFloorPlanChanged.value = SimpleEvent()
+            onSelectItem()
             if (lastPos >= 0) notifyItemChanged(lastPos)
             notifyItemChanged(position)
         }
@@ -79,15 +65,15 @@ class FloorPlanListAdapter() : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewH
 
         with(holder) {
             buttonDelete.setOnClickListener {
-                _deleteSelectedFloorPlan.value = SimpleEvent()
+                onDeleteItem(getItem(position))
                 expandedPosition = -1
-                _selectedFloorPlanChanged.value = SimpleEvent()
+                onSelectItem()
             }
             buttonUpdate.setOnClickListener {
-                _updateSelectedFloorPlan.value = SimpleEvent()
+                onUpdateItem(getItem(position))
             }
             buttonLocalize.setOnClickListener {
-                _localizeSelectedFloorPlan.value = SimpleEvent()
+                onLocalizeItem(getItem(position))
             }
         }
     }

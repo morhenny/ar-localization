@@ -26,6 +26,7 @@ import com.google.android.gms.location.*
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import de.morhenn.ar_localization.R
@@ -91,7 +92,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         recyclerView = binding.floorPlanList
         layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
-        listAdapter = FloorPlanListAdapter()
+        listAdapter = FloorPlanListAdapter(::showDialogToDelete, ::showDialogToUpdate, ::localizeSelectedFloorPlan, ::onSelectedFloorPlanChanged)
 
         viewModelFloorPlan.floorPlans.observe(viewLifecycleOwner) {
             listAdapter.submitList(it)
@@ -105,20 +106,6 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
 
         binding.fabFloorPlanList.setOnClickListener {
             showDialogToCreate()
-        }
-
-        with(listAdapter) {
-            deleteSelectedFloorPlan.observe(viewLifecycleOwner) {
-                viewModelFloorPlan.removeFloorPlan(currentFloorPlans[listAdapter.expandedPosition])
-            }
-            updateSelectedFloorPlan.observe(viewLifecycleOwner) {
-                showDialogToUpdate()
-            }
-            localizeSelectedFloorPlan.observe(viewLifecycleOwner) {
-                val selectedPlan = currentFloorPlans[listAdapter.expandedPosition]
-                viewModelAr.floorPlan = selectedPlan
-                findNavController().navigate(FloorPlanListFragmentDirections.actionFloorPlanListFragmentToArLocalizingFragment())
-            }
         }
 
         initializeMenu()
@@ -180,9 +167,10 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                 true //consume all click events on markers and ignore them
             }
         }
+    }
 
-        listAdapter.selectedFloorPlanChanged.observe(viewLifecycleOwner) {
-            it.hasBeenHandled
+    private fun onSelectedFloorPlanChanged() {
+        map?.let { map ->
             val pos = listAdapter.expandedPosition
             val transition = Slide()
             transition.duration = 350
@@ -196,16 +184,34 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                     binding.floorPlanMap.visibility = View.VISIBLE
                     layoutManager.scrollToPositionWithOffset(pos, 150)
                     if (!waitingOnInitialMapLoad) {
-                        showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition], googleMap, requireContext(), 200)
+                        showFloorPlanOnMap(listAdapter.currentList[pos], map, requireContext(), 200)
                     }
                 } else {
-                    showFloorPlanOnMap(currentFloorPlans[listAdapter.expandedPosition], googleMap, requireContext(), 200)
+                    showFloorPlanOnMap(listAdapter.currentList[pos], map, requireContext(), 200)
                 }
             }
         }
     }
 
-    private fun showDialogToUpdate() {
+    private fun showDialogToDelete(floorPlan: FloorPlan) {
+        val builder = MaterialAlertDialogBuilder(requireContext())
+        builder.setTitle(getString(R.string.dialog_delete_floor_plan_title))
+        builder.setMessage(getString(R.string.dialog_delete_floor_plan_message))
+        builder.setPositiveButton(R.string.dialog_button_confirm) { _, _ ->
+            viewModelFloorPlan.removeFloorPlan(floorPlan)
+        }
+        builder.setNeutralButton(R.string.dialog_button_cancel) { _, _ ->
+        }
+        val dialog = builder.create()
+        dialog.show()
+    }
+
+    private fun localizeSelectedFloorPlan(floorPlan: FloorPlan) {
+        viewModelAr.floorPlan = floorPlan
+        findNavController().navigate(FloorPlanListFragmentDirections.actionFloorPlanListFragmentToArLocalizingFragment())
+    }
+
+    private fun showDialogToUpdate(editFloorPlan: FloorPlan) {
         val dialogBinding = DialogNewFloorPlanBinding.inflate(LayoutInflater.from(requireContext()))
         val builder = AlertDialog.Builder(requireContext())
         builder.setView(dialogBinding.root)
@@ -213,7 +219,6 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         dialog.window?.setSoftInputMode(LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         dialog.show()
 
-        val editFloorPlan = currentFloorPlans[listAdapter.expandedPosition]
         with(dialogBinding) {
             dialogNewFloorPlanTitle.text = getText(R.string.update_floor_plan_dialog_title)
             dialogNewFloorPlanHint.text = getText(R.string.update_floor_plan_dialog_hint)
