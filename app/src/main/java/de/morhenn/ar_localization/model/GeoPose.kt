@@ -3,10 +3,10 @@ package de.morhenn.ar_localization.model
 import com.google.android.gms.maps.model.LatLng
 
 data class GeoPose(
-    val latitude: Double,
-    val longitude: Double,
-    val altitude: Double,
-    val heading: Double,
+    var latitude: Double,
+    var longitude: Double,
+    var altitude: Double,
+    var heading: Double,
 ) {
     fun getLatLng(): LatLng {
         return LatLng(latitude, longitude)

@@ -112,6 +112,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     private var currentCloudAnchorNode: ArNode? = null
     private var currentCloudAnchor: CloudAnchor? = null
+    private var lastCloudAnchorNode: ArNode? = null
+    private var lastCloudAnchor: CloudAnchor? = null
 
     private var resolvingArNode: ArModelNode? = null
 
@@ -209,20 +211,33 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             Log.d(TAG, "Geospatial API initialized and earth object assigned")
         }
         if (arState == TRACKING) {
+            calculateUserPose()
+
             val currentMillis = System.currentTimeMillis()
             if (currentMillis - lastResolveUpdate > trackingResolveInterval) {
                 lastResolveUpdate = currentMillis
                 findNextCloudAnchorAndResolve()
             }
             if (currentMillis - lastPositionUpdate > INTERVAL_POSITION_UPDATE) {
+                userPose?.let { CameraUpdateFactory.newLatLng(it.getLatLng()) }?.let { map?.moveCamera(it) }
+
                 lastPositionUpdate = currentMillis
-                currentCloudAnchor?.let { cloudAnchor ->
-                    userPose?.let {
-                        updateRenderedMappingPointsList(it)
-                    } ?: run {
-                        updateRenderedMappingPointsList(cloudAnchor.getGeoPose())
+                lastCloudAnchorNode?.let {
+                    lastCloudAnchorNode = null
+                    lastCloudAnchor = null
+                    it.parent = null
+                    it.detachAnchor()
+                    it.destroy()
+                } ?: run {
+                    currentCloudAnchor?.let { cloudAnchor ->
+                        //TODO check if this should update from lastCloudAnchorNode too, to smooth out the transitions
+                        //TODO add preview of next cloud anchors here
+                        userPose?.let {
+                            updateRenderedMappingPointsList(it)
+                        } ?: run {
+                            updateRenderedMappingPointsList(cloudAnchor.getGeoPose())
+                        }
                     }
-                    calculateUserPose()
                 }
             }
         }
@@ -244,26 +259,45 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun calculateUserPose() {
-        val cameraPositionRelativeToCurrentAnchor = currentCloudAnchorNode!!.worldToLocalPosition(sceneView.camera.worldPosition.toVector3()).toFloat3()
-        val cameraGeoPoseFromAnchor = GeoUtils.getGeoPoseByLocalCoordinateOffset(currentCloudAnchor!!.getGeoPose(), cameraPositionRelativeToCurrentAnchor)
-        map?.let { map ->
-            val userIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_green, requireContext()))
-            userPositionMarker?.remove()
-            userPositionMarker = map.addMarker(MarkerOptions().position(cameraGeoPoseFromAnchor.getLatLng()).icon(userIcon))
-            earth?.let {
-                val geospatialIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_person_pin_circle_24_red, requireContext()))
-                geospatialPositionMarker?.remove()
-                val earthLatLng = LatLng(it.cameraGeospatialPose.latitude, it.cameraGeospatialPose.longitude)
-                geospatialPositionMarker = map.addMarker(MarkerOptions().position(earthLatLng).icon(geospatialIcon))
-            }
-            val cameraUpdate = CameraUpdateFactory.newLatLng(cameraGeoPoseFromAnchor.getLatLng())
-            map.moveCamera(cameraUpdate)
-        }
-        userPose = cameraGeoPoseFromAnchor
+        val calculatingAnchorNode = lastCloudAnchorNode ?: currentCloudAnchorNode
+        val calculatingAnchor = lastCloudAnchor ?: currentCloudAnchor
 
-        earth?.let {
-            lastLocation?.let { lastLocation ->
-                DataExport.addLocalizingData(it.cameraGeospatialPose, cameraGeoPoseFromAnchor, lastLocation)
+        calculatingAnchorNode?.let { calculatingAnchorNode ->
+            calculatingAnchor?.let { calculatingAnchor ->
+                val cameraPositionRelativeToCurrentAnchor = calculatingAnchorNode.worldToLocalPosition(sceneView.camera.worldPosition.toVector3()).toFloat3()
+                val cameraGeoPoseFromAnchor = GeoUtils.getGeoPoseByLocalCoordinateOffset(calculatingAnchor.getGeoPose(), cameraPositionRelativeToCurrentAnchor)
+
+                val cameraHeadingRelativeToAnchorHeading = ((calculatingAnchorNode.worldRotation.y % 360) - (sceneView.camera.worldRotation.y % 360)) % 360
+
+                cameraGeoPoseFromAnchor.heading = (cameraGeoPoseFromAnchor.heading + cameraHeadingRelativeToAnchorHeading) % 360
+
+                map?.let { map ->
+                    val userIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_navigation_24_green, requireContext()))
+                    userPositionMarker?.let {
+                        it.position = cameraGeoPoseFromAnchor.getLatLng()
+                        it.rotation = -cameraGeoPoseFromAnchor.heading.toFloat()
+                    } ?: run {
+                        userPositionMarker = map.addMarker(MarkerOptions().position(cameraGeoPoseFromAnchor.getLatLng()).icon(userIcon).anchor(0.5f, 0.5f).rotation(-cameraGeoPoseFromAnchor.heading.toFloat()))
+                    }
+
+                    earth?.let {
+                        val geospatialIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_navigation_24_red, requireContext()))
+                        val earthLatLng = LatLng(it.cameraGeospatialPose.latitude, it.cameraGeospatialPose.longitude)
+                        geospatialPositionMarker?.let { marker ->
+                            marker.position = earthLatLng
+                            marker.rotation = it.cameraGeospatialPose.heading.toFloat()
+                        } ?: run {
+                            geospatialPositionMarker = map.addMarker(MarkerOptions().position(earthLatLng).icon(geospatialIcon).anchor(0.5f, 0.5f).rotation(it.cameraGeospatialPose.heading.toFloat()))
+                        }
+                    }
+                }
+                userPose = cameraGeoPoseFromAnchor
+
+                earth?.let {
+                    lastLocation?.let { lastLocation ->
+                        DataExport.addLocalizingData(it.cameraGeospatialPose, cameraGeoPoseFromAnchor, lastLocation)
+                    }
+                }
             }
         }
     }
@@ -633,17 +667,15 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 if (success) {
                     updateResolveButtons(NONE)
 
-                    lastPositionUpdate = System.currentTimeMillis() //Wait a short moment for the next position update, until the new anchor is fully loaded
                     removeGeospatialCloudAnchorPreviews()
 
                     this.anchor = anchor
                     setModel(modelMap[AXIS])
-                    currentCloudAnchorNode?.let {
-                        it.parent = null
-                        it.detachAnchor()
-                        it.destroy()
-                    }
+
+                    lastPositionUpdate = System.currentTimeMillis() //Wait a short moment for the next position update, until the new anchor is fully loaded
+                    lastCloudAnchorNode = currentCloudAnchorNode
                     currentCloudAnchorNode = this
+                    lastCloudAnchor = currentCloudAnchor
                     findCloudAnchorFromId(anchor.cloudAnchorId)?.let {
                         currentCloudAnchor = it
                         filteredCloudAnchorList.remove(it)

@@ -10,7 +10,7 @@
 
     <item
         android:id="@+id/floor_plan_list_sort_by"
-        android:icon="@drawable/ic_baseline_sort_24"
+        android:icon="@drawable/ic_baseline_sort_24_white"
         android:title="@string/menu_item_sort"
         app:showAsAction="always">
         <menu>

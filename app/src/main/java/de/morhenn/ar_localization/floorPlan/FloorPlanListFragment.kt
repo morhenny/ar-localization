@@ -33,7 +33,6 @@ import de.morhenn.ar_localization.ar.AugmentedRealityViewModel
 import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
-import de.morhenn.ar_localization.utils.FileLog
 import de.morhenn.ar_localization.utils.Utils
 import de.morhenn.ar_localization.utils.Utils.showFloorPlanOnMap
 import kotlinx.coroutines.delay
@@ -62,7 +61,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     private var requestingLocationUpdates = false
-    private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, 5000).build()
+    private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, LOCATION_REQUEST_INTERVAL).build()
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             locationResult.lastLocation?.let { newLocation ->
@@ -334,5 +333,6 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
 
     companion object {
         private const val TAG = "FloorPlanListFragment"
+        private const val LOCATION_REQUEST_INTERVAL = 1000L
     }
 }

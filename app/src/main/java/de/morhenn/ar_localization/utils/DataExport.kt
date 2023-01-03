@@ -17,8 +17,8 @@ import java.time.format.DateTimeFormatter
 object DataExport {
 
     private const val TAG = "DataExport"
-    private const val FILE_NAME_MAPPING_PREFIX = "Mapping_Export_"
-    private const val FILE_NAME_LOCALIZING_PREFIX = "Localizing_Export_"
+    private const val FILE_NAME_MAPPING_PREFIX = "Map__"
+    private const val FILE_NAME_LOCALIZING_PREFIX = "Localize__"
     private var fileNameMapping = ""
     private var fileNameLocalizing = ""
 
@@ -69,9 +69,6 @@ object DataExport {
             setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true)
             startTag(null, "kml")
             startTag(null, "Document")
-            startTag(null, "name")
-            text("Mapping Data Export")
-            endTag(null, "name")
             startTag(null, "Placemark")
             startTag(null, "name")
             text("Mapped Floor Plan")
@@ -154,9 +151,6 @@ object DataExport {
             setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true)
             startTag(null, "kml")
             startTag(null, "Document")
-            startTag(null, "name")
-            text("Localizing Data Export")
-            endTag(null, "name")
             startTag(null, "Style")
             attribute(null, "id", "cpsStyle")
             startTag(null, "LineStyle")
