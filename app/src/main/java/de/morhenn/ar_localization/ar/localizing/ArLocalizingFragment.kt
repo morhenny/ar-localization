@@ -267,17 +267,17 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 val cameraPositionRelativeToCurrentAnchor = calculatingAnchorNode.worldToLocalPosition(sceneView.camera.worldPosition.toVector3()).toFloat3()
                 val cameraGeoPoseFromAnchor = GeoUtils.getGeoPoseByLocalCoordinateOffset(calculatingAnchor.getGeoPose(), cameraPositionRelativeToCurrentAnchor)
 
-                val cameraHeadingRelativeToAnchorHeading = ((calculatingAnchorNode.worldRotation.y % 360) - (sceneView.camera.worldRotation.y % 360)) % 360
+                val cameraHeadingRelativeToAnchorHeading = (sceneView.camera.worldRotation.y.mod(360.0) - calculatingAnchorNode.worldRotation.y.mod(360.0)).mod(360.0)
 
-                cameraGeoPoseFromAnchor.heading = (cameraGeoPoseFromAnchor.heading + cameraHeadingRelativeToAnchorHeading) % 360
+                cameraGeoPoseFromAnchor.heading = (cameraGeoPoseFromAnchor.heading.mod(360.0) + cameraHeadingRelativeToAnchorHeading.mod(360.0)).mod(360.0)
 
                 map?.let { map ->
                     val userIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_navigation_24_green, requireContext()))
                     userPositionMarker?.let {
                         it.position = cameraGeoPoseFromAnchor.getLatLng()
-                        it.rotation = -cameraGeoPoseFromAnchor.heading.toFloat()
+                        it.rotation = cameraGeoPoseFromAnchor.heading.toFloat()
                     } ?: run {
-                        userPositionMarker = map.addMarker(MarkerOptions().position(cameraGeoPoseFromAnchor.getLatLng()).icon(userIcon).anchor(0.5f, 0.5f).rotation(-cameraGeoPoseFromAnchor.heading.toFloat()))
+                        userPositionMarker = map.addMarker(MarkerOptions().position(cameraGeoPoseFromAnchor.getLatLng()).icon(userIcon).anchor(0.5f, 0.5f).rotation(cameraGeoPoseFromAnchor.heading.toFloat()))
                     }
 
                     earth?.let {
