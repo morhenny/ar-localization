@@ -667,9 +667,12 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         resolvedPreviewNode?.let {
             Log.d(TAG, "Removing resolve preview anchor node")
             val previewPos = it.worldPosition
-            val posOffsetFromPreviewToCloudAnchor = currentCloudAnchorNode!!.worldPosition.minus(previewPos)
+            val posOffsetFromPreviewToCloudAnchor = currentCloudAnchorNode!!.worldPosition.minus(previewPos) //maybe useful for other test cases
             val distanceFromPreviewToCloudAnchor = GeoUtils.distanceBetweenTwo3dCoordinates(previewPos, currentCloudAnchorNode!!.worldPosition)
-            //TODO log this data
+            lastCloudAnchorNode?.let { lastAnchor ->
+                val distanceToLast = GeoUtils.distanceBetweenTwo3dCoordinates(currentCloudAnchorNode!!.worldPosition, lastAnchor.worldPosition)
+                DataExport.addAnchorErrorSet(distanceToLast, distanceFromPreviewToCloudAnchor)
+            }
 
             it.detachAnchor()
             it.parent = null
@@ -962,6 +965,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     override fun onStop() {
         super.onStop()
+        DataExport.writeAnchorErrorMapToFile(floorPlan.name)
         DataExport.finishLocalizingFile()
     }
 

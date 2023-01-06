@@ -60,7 +60,12 @@ class FloorPlanListAdapter(
             val loc = Location("")
             loc.latitude = getItem(position).mainAnchor.lat
             loc.longitude = getItem(position).mainAnchor.lng
-            holder.textDistance.text = String.format("%.2f m", it.distanceTo(loc))
+            val distance = it.distanceTo(loc)
+            if (distance > 1000) {
+                holder.textDistance.text = String.format("%.1f km", distance / 1000)
+            } else {
+                holder.textDistance.text = String.format("%.2f m", distance)
+            }
         }
 
         with(holder) {
@@ -81,6 +86,12 @@ class FloorPlanListAdapter(
     fun updateCurrentLocation(location: Location) {
         currentLocation = location
         notifyItemRangeChanged(0, itemCount)
+    }
+
+    fun resetExpanded() {
+        expandedPosition = -1
+        notifyDataSetChanged()
+        onSelectItem()
     }
 
     class ViewHolder(private val binding: ItemFloorPlanListBinding) : RecyclerView.ViewHolder(binding.root) {

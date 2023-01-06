@@ -14,15 +14,33 @@
         android:title="@string/menu_item_sort"
         app:showAsAction="always">
         <menu>
-            <item
-                android:id="@+id/sort_floor_plans_by_name"
-                android:title="@string/sort_by_name" />
-            <item
-                android:id="@+id/sort_floor_plans_by_distance"
-                android:title="@string/sort_by_distance" />
-            <item
-                android:id="@+id/sort_floor_plans_by_created"
-                android:title="@string/sort_by_created" />
+            <group android:checkableBehavior="single">
+                <item
+                    android:id="@+id/sort_floor_plans_by_name"
+                    android:title="@string/sort_by_name" />
+                <item
+                    android:id="@+id/sort_floor_plans_by_distance"
+                    android:title="@string/sort_by_distance" />
+                <item
+                    android:id="@+id/sort_floor_plans_by_created"
+                    android:title="@string/sort_by_created" />
+            </group>
         </menu>
+    </item>
+    <item
+        android:id="@+id/settings"
+        android:icon="@drawable/ic_baseline_settings_24"
+        android:title="Settings"
+        app:showAsAction="always">
+
+        <menu>
+            <item
+                android:id="@+id/setting_enable_logging"
+                android:checkable="true"
+                android:title="Logging"
+                app:actionViewClass="android.widget.CheckBox"
+                app:showAsAction="always" />
+        </menu>
+
     </item>
 </menu>

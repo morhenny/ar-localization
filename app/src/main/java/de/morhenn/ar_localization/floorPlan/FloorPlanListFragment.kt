@@ -34,6 +34,7 @@ import de.morhenn.ar_localization.ar.AugmentedRealityViewModel
 import de.morhenn.ar_localization.databinding.DialogNewFloorPlanBinding
 import de.morhenn.ar_localization.databinding.FragmentFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
+import de.morhenn.ar_localization.utils.DataExport
 import de.morhenn.ar_localization.utils.Utils
 import de.morhenn.ar_localization.utils.Utils.showFloorPlanOnMap
 import kotlinx.coroutines.delay
@@ -68,7 +69,9 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
             locationResult.lastLocation?.let { newLocation ->
                 listAdapter.currentLocation?.let { lastLocation ->
                     if (lastLocation.distanceTo(newLocation) > 1f) {
-                        if (sortByLocation) viewModelFloorPlan.sortListByNewLocation(newLocation)
+                        if (sortByLocation) {
+                            viewModelFloorPlan.sortListByNewLocation(newLocation)
+                        }
                         listAdapter.updateCurrentLocation(newLocation)
                     }
                 } ?: run {
@@ -96,7 +99,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
 
         viewModelFloorPlan.floorPlans.observe(viewLifecycleOwner) {
             listAdapter.submitList(it)
-            listAdapter.notifyDataSetChanged()
+            listAdapter.notifyItemRangeChanged(0, listAdapter.itemCount)
             currentFloorPlans = it
         }
         recyclerView.adapter = listAdapter
@@ -128,20 +131,36 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                         return true
                     }
                 })
+                menu.findItem(R.id.setting_enable_logging).isChecked = true
+                menu.findItem(R.id.sort_floor_plans_by_name).isChecked = true
+                sortByLocation = false
             }
 
             override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
                 when (menuItem.itemId) {
                     R.id.sort_floor_plans_by_name -> {
+                        menuItem.isChecked = true
                         viewModelFloorPlan.lastLocation = null
                         viewModelFloorPlan.refreshFloorPlanList(true)
+                        listAdapter.resetExpanded()
+                        sortByLocation = false
                     }
                     R.id.sort_floor_plans_by_distance -> {
+                        menuItem.isChecked = true
                         listAdapter.currentLocation?.let { viewModelFloorPlan.sortListByNewLocation(it) }
+                        listAdapter.resetExpanded()
+                        sortByLocation = true
                     }
                     R.id.sort_floor_plans_by_created -> {
                         viewModelFloorPlan.lastLocation = null
+                        menuItem.isChecked = true
                         viewModelFloorPlan.refreshFloorPlanList(false)
+                        listAdapter.resetExpanded()
+                        sortByLocation = false
+                    }
+                    R.id.setting_enable_logging -> {
+                        menuItem.isChecked = !menuItem.isChecked
+                        DataExport.loggingEnabled = menuItem.isChecked
                     }
                     else -> {}
                 }
@@ -170,6 +189,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun onSelectedFloorPlanChanged() {
+        Utils.hideKeyboard(requireActivity())
         map?.let { map ->
             val pos = listAdapter.expandedPosition
             val transition = Slide()
