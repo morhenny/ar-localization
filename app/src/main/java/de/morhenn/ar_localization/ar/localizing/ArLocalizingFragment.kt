@@ -68,6 +68,8 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.toFloat3
 import io.github.sceneview.math.toVector3
 import io.github.sceneview.model.await
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.*
 
 class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
@@ -83,7 +85,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var geospatialEnabled = true
         set(value) {
             if (!value && arState == RESOLVING && resolveMode == GEOSPATIAL) {
-                removeGeospatialCloudAnchorPreviews()
+                removeCloudAnchorPreviews()
                 resolvingArNode?.cancelCloudAnchorResolveTask()
                 binding.arLocalizingProgressBar.visibility = View.INVISIBLE
             }
@@ -119,9 +121,11 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     private var userPose: GeoPose? = null
     private var currentRenderedMappingPoints = mutableListOf<ArNode>()
+    private var currentRenderedAnchorPreviews = mutableListOf<ArNode>()
+    private val previewAnchorMap = mutableMapOf<CloudAnchor, ArNode>()
+
     private var userPositionMarker: Marker? = null
     private var geospatialPositionMarker: Marker? = null
-
     private var currentResolvedMapMarker: Marker? = null
 
     private var lastPositionUpdate: Long = 0
@@ -181,7 +185,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
 
         sceneView = binding.sceneViewLocalizing
-        sceneView.lightEstimationMode = LightEstimationMode.AMBIENT_INTENSITY
+        sceneView.lightEstimationMode = LightEstimationMode.DISABLED
         sceneView.planeRenderer.isEnabled = false
 
         sceneView.onArSessionCreated = {
@@ -228,15 +232,12 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     it.parent = null
                     it.detachAnchor()
                     it.destroy()
-                } ?: run {
-                    currentCloudAnchor?.let { cloudAnchor ->
-                        //TODO check if this should update from lastCloudAnchorNode too, to smooth out the transitions
-                        //TODO add preview of next cloud anchors here
-                        userPose?.let {
-                            updateRenderedMappingPointsList(it)
-                        } ?: run {
-                            updateRenderedMappingPointsList(cloudAnchor.getGeoPose())
-                        }
+                }
+                currentCloudAnchor?.let { cloudAnchor ->
+                    userPose?.let {
+                        updateRenderedMappingPointsList(it)
+                    } ?: run {
+                        updateRenderedMappingPointsList(cloudAnchor.getGeoPose())
                     }
                 }
             }
@@ -306,7 +307,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         val newRenderedMappingPoints = mutableListOf<ArNode>()
 
         val relativePositionOfPose = GeoUtils.getLocalCoordinateOffsetFromTwoGeoPoses(floorPlan.mainAnchor.getGeoPose(), geoPose)
-        val relativePositionOfCurrentAnchor = GeoUtils.getLocalCoordinateOffsetFromTwoGeoPoses(floorPlan.mainAnchor.getGeoPose(), currentCloudAnchor!!.getGeoPose())
+        val relativePositionOfCurrentAnchor = currentCloudAnchor!!.let {
+            Position(it.xToMain, it.yToMain, it.zToMain)
+        }
         floorPlan.mappingPointList.forEach {
             val distance = GeoUtils.distanceBetweenTwo3dCoordinates(Position(it.x, it.y, it.z), relativePositionOfPose)
             if (distance < MAPPING_POINT_RENDER_DISTANCE) {
@@ -337,6 +340,46 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
         currentRenderedMappingPoints.removeAll(mappingPointsToRemove)
         currentRenderedMappingPoints.addAll(newRenderedMappingPoints)
+
+        val newAnchorPreviews = mutableListOf<ArNode>()
+        val cloudAnchorListIncludingInitial = mutableListOf<CloudAnchor>()
+        cloudAnchorListIncludingInitial.addAll(floorPlan.cloudAnchorList)
+        cloudAnchorListIncludingInitial.add(floorPlan.mainAnchor)
+        cloudAnchorListIncludingInitial.remove(currentCloudAnchor)
+
+        previewAnchorMap.clear()
+        cloudAnchorListIncludingInitial.forEach {
+            val distance = GeoUtils.distanceBetweenTwo3dCoordinates(Position(it.xToMain, it.yToMain, it.zToMain), relativePositionOfPose)
+            if (distance < ANCHOR_PREVIEW_RENDER_DISTANCE) {
+                val relativePositionToCurrentTrackingAnchor = Position(it.xToMain, it.yToMain, it.zToMain) - relativePositionOfCurrentAnchor
+                val potentiallyAlreadyRenderedAnchor = currentRenderedAnchorPreviews.find { arNode -> arNode.position == relativePositionToCurrentTrackingAnchor }
+                potentiallyAlreadyRenderedAnchor?.let { arNode ->
+                    previewAnchorMap[it] = arNode
+                    newAnchorPreviews.add(arNode)
+                } ?: run {
+                    val node = ArNode().apply {
+                        previewAnchorMap[it] = this
+                        this.parent = currentCloudAnchorNode
+                        this.position = relativePositionToCurrentTrackingAnchor
+                        setModel(modelMap[ANCHOR_TRACKING_PREVIEW])
+                    }
+                    newAnchorPreviews.add(node)
+                }
+            }
+        }
+        val anchorPreviewsToRemove = mutableListOf<ArNode>()
+        currentRenderedAnchorPreviews.forEach {
+            if (newAnchorPreviews.contains(it)) {
+                newAnchorPreviews.remove(it)
+            } else {
+                it.detachAnchor()
+                it.parent = null
+                it.destroy()
+                anchorPreviewsToRemove.add(it)
+            }
+        }
+        currentRenderedAnchorPreviews.removeAll(anchorPreviewsToRemove)
+        currentRenderedAnchorPreviews.addAll(newAnchorPreviews)
     }
 
     private fun initializeUIElements() {
@@ -584,9 +627,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun findNextCloudAnchorAndResolve() {
         userPose?.let {
             Log.d(TAG, "Cancelling resolve tasks")
-
             updateState(TRACKING)
-
             resolveAnyOfClosestCloudAnchors(it)
         }
     }
@@ -599,35 +640,22 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 parent = sceneView
                 setModel(modelMap[GEO_ANCHOR])
             }
-            val mainEarthNodeArrow = ArNode().apply {
-                position = Position(0f, 2f, 0f)
-                parent = mainEarthNode
-                setModel(modelMap[GEO_ANCHOR_ARROW])
-            }
             earthNodeList.add(mainEarthNode)
-            earthNodeList.add(mainEarthNodeArrow)
 
             getClosestCloudAnchorIfTooMany().forEach {
-                //TODO smaller indicators for these anchors
                 val cloudAnchor = earth!!.createAnchor(it.lat, it.lng, it.alt, 0f, 0f, 0f, 1f)
                 val cloudAnchorNode = ArNode().apply {
                     anchor = cloudAnchor
                     parent = sceneView
                     setModel(modelMap[GEO_ANCHOR])
                 }
-                val cloudAnchorNodeArrow = ArNode().apply {
-                    position = Position(0f, 2f, 0f)
-                    parent = cloudAnchorNode
-                    setModel(modelMap[GEO_ANCHOR_ARROW])
-                }
                 earthNodeList.add(cloudAnchorNode)
-                earthNodeList.add(cloudAnchorNodeArrow)
             }
         }
     }
 
-    private fun removeGeospatialCloudAnchorPreviews() {
-        if (arState == RESOLVING && resolveMode == GEOSPATIAL) {
+    private fun removeCloudAnchorPreviews(resolvedPreviewNode: ArNode? = null) {
+        if (earthNodeList.isNotEmpty()) {
             Log.d(TAG, "Removing all earth nodes")
             earthNodeList.forEach {
                 it.detachAnchor()
@@ -635,6 +663,18 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 it.destroy()
             }
             earthNodeList.clear()
+        }
+        resolvedPreviewNode?.let {
+            Log.d(TAG, "Removing resolve preview anchor node")
+            val previewPos = it.worldPosition
+            val posOffsetFromPreviewToCloudAnchor = currentCloudAnchorNode!!.worldPosition.minus(previewPos)
+            val distanceFromPreviewToCloudAnchor = GeoUtils.distanceBetweenTwo3dCoordinates(previewPos, currentCloudAnchorNode!!.worldPosition)
+            //TODO log this data
+
+            it.detachAnchor()
+            it.parent = null
+            it.destroy()
+            currentRenderedAnchorPreviews.remove(it)
         }
     }
 
@@ -667,10 +707,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 if (success) {
                     updateResolveButtons(NONE)
 
-                    removeGeospatialCloudAnchorPreviews()
-
+                    isVisible = false
                     this.anchor = anchor
-                    setModel(modelMap[AXIS])
+                    setModel(modelMap[ANCHOR_RESOLVED])
 
                     lastPositionUpdate = System.currentTimeMillis() //Wait a short moment for the next position update, until the new anchor is fully loaded
                     lastCloudAnchorNode = currentCloudAnchorNode
@@ -681,6 +720,12 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                         filteredCloudAnchorList.remove(it)
                         filteredCloudAnchorList.add(0, it)
                         anchorListAdapter.indicateResolved(it)
+
+                        lifecycleScope.launch {
+                            delay(500) //wait for the node to show at the correct position
+                            isVisible = true
+                            removeCloudAnchorPreviews(previewAnchorMap[it])
+                        }
                     }
                     binding.arLocalizingBottomSheetCurrentlyResolved.text = getString(R.string.ar_localizing_currently_resolved, currentCloudAnchor?.text)
                     updateResolvedMapMarker()
@@ -870,11 +915,15 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             .setIsFilamentGltf(true)
             .await(lifecycle)
         modelMap[GEO_ANCHOR] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/geoAnchor.glb"))
+            .setSource(context, Uri.parse("models/anchorGeospatialPreview.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
-        modelMap[GEO_ANCHOR_ARROW] = ModelRenderable.builder()
-            .setSource(context, Uri.parse("models/geoAnchorArrow.glb"))
+        modelMap[ANCHOR_RESOLVED] = ModelRenderable.builder()
+            .setSource(context, Uri.parse("models/anchorResolved.glb"))
+            .setIsFilamentGltf(true)
+            .await(lifecycle)
+        modelMap[ANCHOR_TRACKING_PREVIEW] = ModelRenderable.builder()
+            .setSource(context, Uri.parse("models/anchorTrackingPreview.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
     }
@@ -928,7 +977,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
         private const val MIN_HORIZONTAL_ACCURACY = 2.0
         private const val MAX_SIMULTANEOUS_ANCHORS = 40
-        private const val MAPPING_POINT_RENDER_DISTANCE = 10.0
+        private const val MAPPING_POINT_RENDER_DISTANCE = 8.0
+        private const val ANCHOR_PREVIEW_RENDER_DISTANCE = 10.0
         private const val INTERVAL_POSITION_UPDATE = 750L
         private const val INTERVAL_RESOLVE_UPDATE = 5000L
     }

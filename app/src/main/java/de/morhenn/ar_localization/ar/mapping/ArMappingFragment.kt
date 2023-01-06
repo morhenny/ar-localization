@@ -334,6 +334,7 @@ class ArMappingFragment : Fragment() {
         val dialog = builder.create()
         dialog.window?.setSoftInputMode(LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         dialog.show()
+        dialogBinding.dialogNewAnchorInputFloor.setText(newAnchorFloor.toString()) //TODO possibly autodetect altitude movement and change prefilled floor accordingly
         dialogBinding.dialogNewAnchorInputText.requestFocus()
         dialogBinding.dialogNewAnchorButtonConfirm.setOnClickListener {
             if (dialogBinding.dialogNewAnchorInputText.text.toString().isNotEmpty()) {

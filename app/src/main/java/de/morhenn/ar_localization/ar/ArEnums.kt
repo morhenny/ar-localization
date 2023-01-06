@@ -46,5 +46,6 @@ enum class ModelName {
     AXIS,
     BALL,
     GEO_ANCHOR,
-    GEO_ANCHOR_ARROW,
+    ANCHOR_RESOLVED,
+    ANCHOR_TRACKING_PREVIEW,
 }
