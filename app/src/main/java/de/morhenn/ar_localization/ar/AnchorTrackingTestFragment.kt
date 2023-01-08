@@ -12,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.ar.core.Config
 import com.google.ar.core.Earth
+import com.google.ar.core.GeospatialPose
 import com.google.ar.core.TrackingState
 import com.google.ar.sceneform.rendering.ModelRenderable
 import de.morhenn.ar_localization.R
@@ -88,14 +89,15 @@ class AnchorTrackingTestFragment : Fragment() {
                     binding.arAnchorTrackingTestGeospatialAccuracy.updateView(earth.cameraGeospatialPose)
 
                     if (runningTest) {
-                        val distanceFromLastAnchor = GeoUtils.distanceBetweenTwo3dCoordinates(frame.camera.pose.position.apply { --y }, lastAnchorPosition)
+                        val distanceFromLastAnchor = GeoUtils.distanceBetweenTwo3dCoordinates(frame.camera.pose.position, lastAnchorPosition)
                         if (distanceFromLastAnchor > anchorPlacementDistance) {
                             placeNextAnchor(earth, frame)
                         }
                         val timeSinceLastLog = System.currentTimeMillis() - lastLogTimeStamp
                         if (timeSinceLastLog > loggingInterval) {
                             initialAnchorGeoPose?.let {
-                                DataExport.addAnchorTrackingData(GeoUtils.getGeoPoseByLocalCoordinateOffset(it, frame.camera.pose.position), earth.cameraGeospatialPose)
+                                val cameraAsLocalPositionOfInitial = anchorList.first().worldToLocalPosition(frame.camera.pose.position.toVector3()).toFloat3()
+                                DataExport.addAnchorTrackingData(GeoUtils.getGeoPoseByLocalCoordinateOffset(it, cameraAsLocalPositionOfInitial), earth.cameraGeospatialPose)
                                 lastLogTimeStamp = System.currentTimeMillis()
                             }
                         }
@@ -147,7 +149,7 @@ class AnchorTrackingTestFragment : Fragment() {
             val initialAnchor = ArModelNode(PlacementMode.DISABLED).apply {
                 parent = sceneView
                 with(earth.cameraGeospatialPose) {
-                    val poseFromCamera = frame.camera.pose.position.apply { --y }
+                    val poseFromCamera = frame.camera.pose.position
                     with(poseFromCamera) {
                         this@apply.position = this
                         lastAnchorPosition = this
@@ -158,11 +160,11 @@ class AnchorTrackingTestFragment : Fragment() {
                 anchor()
             }
             anchorList.add(initialAnchor)
-        } else {
+        } else if (anchorPlacementDistance != 0f) {
             val nextAnchor = ArModelNode(PlacementMode.DISABLED).apply {
                 val lastAnchor = anchorList.last()
                 parent = lastAnchor
-                with(lastAnchor.worldToLocalPosition(frame.camera.pose.position.apply { --y }.toVector3()).toFloat3()) {
+                with(lastAnchor.worldToLocalPosition(frame.camera.pose.position.toVector3()).toFloat3()) {
                     position = this
                 }
                 setModel(modelBall)
@@ -178,4 +180,8 @@ class AnchorTrackingTestFragment : Fragment() {
         private const val DEFAULT_DISTANCE_BETWEEN_ANCHOR_PLACEMENTS = 2.0f
         private const val DEFAULT_LOG_INTERVAL = 1000L
     }
+}
+
+fun GeospatialPose.toGeoPose(): GeoPose {
+    return GeoPose(latitude, longitude, altitude, heading)
 }
