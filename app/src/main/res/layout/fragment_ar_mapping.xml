@@ -30,7 +30,6 @@
         android:indeterminateTint="@color/white"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="@id/ar_extended_fab"
-
         app:layout_constraintLeft_toLeftOf="@id/ar_extended_fab"
         app:layout_constraintTop_toTopOf="@id/ar_extended_fab" />
 

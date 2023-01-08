@@ -1,0 +1,87 @@
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <de.morhenn.ar_localization.ar.GeospatialAccuracyView
+        android:id="@+id/ar_anchor_tracking_test_geospatial_accuracy"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:elevation="4dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <io.github.sceneview.ar.ArSceneView
+        android:id="@+id/sceneView_anchor_tracking_test"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ar_anchor_tracking_test_geospatial_accuracy" />
+
+    <TextView
+        android:id="@+id/anchor_tracking_test_interval_hint"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:text="@string/anchor_tracking_interval_hint"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="@id/anchor_tracking_test_interval"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/anchor_tracking_test_interval" />
+
+    <EditText
+        android:id="@+id/anchor_tracking_test_interval"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/anchor_tracking_test_interval_hint"
+        app:layout_constraintTop_toBottomOf="@id/ar_anchor_tracking_test_geospatial_accuracy" />
+
+    <TextView
+        android:id="@+id/anchor_tracking_test_distance_hint"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="10dp"
+        android:text="@string/anchor_tracking_distance_hint"
+        android:textSize="16sp"
+        app:layout_constraintBottom_toBottomOf="@id/anchor_tracking_test_distance"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/anchor_tracking_test_distance" />
+
+    <EditText
+        android:id="@+id/anchor_tracking_test_distance"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:inputType="numberDecimal"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/anchor_tracking_test_distance_hint"
+        app:layout_constraintTop_toBottomOf="@id/anchor_tracking_test_interval" />
+
+    <ProgressBar
+        android:id="@+id/anchor_test_progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:elevation="8dp"
+        android:indeterminate="true"
+        android:indeterminateTint="@color/black"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/ar_anchor_tracking_test_fab"
+        app:layout_constraintLeft_toLeftOf="@id/ar_anchor_tracking_test_fab"
+        app:layout_constraintTop_toTopOf="@id/ar_anchor_tracking_test_fab" />
+
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/ar_anchor_tracking_test_fab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:text="@string/test_start"
+        app:icon="@drawable/ic_baseline_construction_24"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

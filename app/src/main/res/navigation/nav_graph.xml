@@ -24,6 +24,9 @@
         <action
             android:id="@+id/action_floorPlanListFragment_to_arLocalizingFragment"
             app:destination="@id/arLocalizingFragment" />
+        <action
+            android:id="@+id/action_floorPlanListFragment_to_anchorTrackingTestFragment"
+            app:destination="@id/anchorTrackingTestFragment" />
     </fragment>
     <fragment
         android:id="@+id/loginFragment"
@@ -33,5 +36,9 @@
             android:id="@+id/action_loginFragment_to_floorPlanListFragment"
             app:destination="@id/floorPlanListFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/anchorTrackingTestFragment"
+        android:name="de.morhenn.ar_localization.ar.AnchorTrackingTestFragment"
+        android:label="AnchorTrackingTestFragment" />
 
 </navigation>

@@ -103,7 +103,7 @@ class ArMappingFragment : Fragment() {
         }
 
         sceneView = binding.sceneView
-        sceneView.lightEstimationMode = LightEstimationMode.AMBIENT_INTENSITY
+        sceneView.lightEstimationMode = LightEstimationMode.DISABLED
 
         sceneView.onArSessionCreated = {
             sceneView.configureSession { _, config ->

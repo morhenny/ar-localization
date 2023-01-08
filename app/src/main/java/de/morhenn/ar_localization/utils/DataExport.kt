@@ -21,10 +21,13 @@ object DataExport {
     private const val TAG = "DataExport"
     private const val FILE_NAME_MAPPING_PREFIX = "Map__"
     private const val FILE_NAME_LOCALIZING_PREFIX = "Localize__"
-    private const val FILE_NAME_ANCHOR_ERROR = "AnchorError__"
+    private const val FILE_NAME_ANCHOR_ERROR_PREFIX = "AnchorError__"
+    private const val FILE_NAME_ANCHOR_TRACKING_TEST_PREFIX = "TrackingTest__"
+
     private var fileNameMapping = ""
     private var fileNameLocalizing = ""
     private var fileNameAnchorError = ""
+    private var fileNameTrackingTest = ""
 
     private var hasOpenMappingFile = false
     private var hasOpenLocalizingFile = false
@@ -35,6 +38,7 @@ object DataExport {
 
     private lateinit var xmlMap: XmlSerializer
     private lateinit var xmlLocalize: XmlSerializer
+    private lateinit var xmlAnchorTest: XmlSerializer
 
     private var anchorErrorMap = mutableListOf<Pair<Float, Float>>() //error per distance
 
@@ -43,6 +47,9 @@ object DataExport {
     private var vpsList = mutableListOf<GeospatialPose>()
     private var cpsList = mutableListOf<GeoPose>()
     private var gpsList = mutableListOf<Location>()
+
+    private var vpsAnchorTestList = mutableListOf<GeospatialPose>()
+    private var cpsAnchorTestList = mutableListOf<GeoPose>()
 
     fun init(context: Context) {
         path = context.filesDir.absolutePath
@@ -55,10 +62,54 @@ object DataExport {
             .format(Instant.now())
     }
 
+    fun writeAnchorTrackingDataToFile(distanceBetweenAnchors: Float, loggingInterval: Long) {
+        if (loggingEnabled) {
+            Log.d(TAG, "Writing anchor error map to file")
+            fileNameTrackingTest = FILE_NAME_ANCHOR_TRACKING_TEST_PREFIX + currentTimestampString() + ".kml"
+            xmlAnchorTest = XmlPullParserFactory.newInstance().newSerializer()
+            with(xmlAnchorTest) {
+                startDocument(null, null)
+                setOutput(FileWriter("$path/$fileNameTrackingTest", true))
+                setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true)
+                startTag(null, "kml")
+                startTag(null, "Document")
+                startTag(null, "Style")
+                attribute(null, "id", "cpsStyle")
+                startTag(null, "LineStyle")
+                startTag(null, "color")
+                text("00FF00")
+                endTag(null, "color")
+                endTag(null, "LineStyle")
+                endTag(null, "Style")
+                startTag(null, "Style")
+                attribute(null, "id", "vpsStyle")
+                startTag(null, "LineStyle")
+                startTag(null, "color")
+                text("FF0000")
+                endTag(null, "color")
+                endTag(null, "LineStyle")
+                endTag(null, "Style")
+
+                appendAnchorTrackingTestCPSPoints(distanceBetweenAnchors, loggingInterval)
+                appendAnchorTrackingTestVPSPoints()
+
+                endTag(null, "Document")
+                endTag(null, "kml")
+                endDocument()
+                flush()
+            }
+        }
+    }
+
+    fun addAnchorTrackingData(cpsPose: GeoPose, vpsPose: GeospatialPose) {
+        cpsAnchorTestList.add(cpsPose)
+        vpsAnchorTestList.add(vpsPose)
+    }
+
     fun writeAnchorErrorMapToFile(name: String = "") {
         if (loggingEnabled) {
             Log.d(TAG, "Writing anchor error map to file")
-            fileNameAnchorError = FILE_NAME_ANCHOR_ERROR + currentTimestampString() + "_$name .csv"
+            fileNameAnchorError = FILE_NAME_ANCHOR_ERROR_PREFIX + currentTimestampString() + "_$name .csv"
             FileWriter("$path/$fileNameAnchorError").use {
                 it.write("Distance, Error\n")
                 anchorErrorMap.forEach { (distance, error) ->
@@ -220,10 +271,12 @@ object DataExport {
                 appendLocalizingCPSPoints()
                 appendLocalizingVPSPoints()
                 appendLocalizingGPSPoints()
-                xmlLocalize.endTag(null, "Document")
-                xmlLocalize.endTag(null, "kml")
-                xmlLocalize.endDocument()
-                xmlLocalize.flush()
+                with(xmlLocalize) {
+                    endTag(null, "Document")
+                    endTag(null, "kml")
+                    endDocument()
+                    flush()
+                }
                 fileWriterLocalizing.close()
                 hasOpenLocalizingFile = false
                 Log.d(TAG, "Finished Localizing file at: $fileNameLocalizing")
@@ -319,5 +372,62 @@ object DataExport {
         }
 
         gpsList.clear()
+    }
+
+    private fun appendAnchorTrackingTestCPSPoints(distanceBetweenAnchors: Float, loggingInterval: Long) {
+        with(xmlAnchorTest) {
+            startTag(null, "Placemark")
+            startTag(null, "name")
+            text("Anchored SLAM Data")
+            endTag(null, "name")
+            startTag(null, "description")
+            text("Anchor Distance: $distanceBetweenAnchors; Interval: $loggingInterval")
+            endTag(null, "description")
+            startTag(null, "styleUrl")
+            text("#cpsStyle")
+            endTag(null, "styleUrl")
+            startTag(null, "LineString")
+            startTag(null, "altitudeMode")
+            text("absolute")
+            endTag(null, "altitudeMode")
+            startTag(null, "coordinates")
+        }
+        cpsAnchorTestList.forEach {
+            xmlAnchorTest.text("${it.longitude},${it.latitude},${it.altitude}\n")
+        }
+        with(xmlAnchorTest) {
+            endTag(null, "coordinates")
+            endTag(null, "LineString")
+            endTag(null, "Placemark")
+        }
+
+        cpsAnchorTestList.clear()
+    }
+
+    private fun appendAnchorTrackingTestVPSPoints() {
+        with(xmlAnchorTest) {
+            startTag(null, "Placemark")
+            startTag(null, "name")
+            text("VPS")
+            endTag(null, "name")
+            startTag(null, "styleUrl")
+            text("#vpsStyle")
+            endTag(null, "styleUrl")
+            startTag(null, "LineString")
+            startTag(null, "altitudeMode")
+            text("absolute")
+            endTag(null, "altitudeMode")
+            startTag(null, "coordinates")
+        }
+        vpsAnchorTestList.forEach {
+            xmlAnchorTest.text("${it.longitude},${it.latitude},${it.altitude}\n")
+        }
+        with(xmlAnchorTest) {
+            endTag(null, "coordinates")
+            endTag(null, "LineString")
+            endTag(null, "Placemark")
+        }
+
+        vpsAnchorTestList.clear()
     }
 }

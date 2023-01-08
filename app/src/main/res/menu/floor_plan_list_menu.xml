@@ -40,7 +40,11 @@
                 android:title="Logging"
                 app:actionViewClass="android.widget.CheckBox"
                 app:showAsAction="always" />
+            <item
+                android:id="@+id/setting_start_anchor_tracking_test"
+                android:icon="@drawable/ic_baseline_construction_24"
+                android:title="Anchor Tracking Test"
+                app:showAsAction="always" />
         </menu>
-
     </item>
 </menu>

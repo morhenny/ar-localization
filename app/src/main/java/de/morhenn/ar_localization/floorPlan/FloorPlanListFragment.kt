@@ -162,6 +162,9 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                         menuItem.isChecked = !menuItem.isChecked
                         DataExport.loggingEnabled = menuItem.isChecked
                     }
+                    R.id.setting_start_anchor_tracking_test -> {
+                        findNavController().navigate(R.id.action_floorPlanListFragment_to_anchorTrackingTestFragment)
+                    }
                     else -> {}
                 }
                 return false

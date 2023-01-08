@@ -7,15 +7,15 @@ import kotlin.math.*
 
 object GeoUtils {
 
-    fun getLatLngByDistanceAndBearing(lat: Double, lng: Double, bearing: Double, distanceKm: Double): LatLng {
-        val earthRadius = 6378.1
+    private const val EARTH_RADIUS = 6371.001 // average earth radius in km
 
+    fun getLatLngByDistanceAndBearing(lat: Double, lng: Double, bearing: Double, distanceKm: Double): LatLng {
         val bearingR = Math.toRadians(bearing)
 
         val latR = Math.toRadians(lat)
         val lngR = Math.toRadians(lng)
 
-        val distanceToRadius = distanceKm / earthRadius
+        val distanceToRadius = distanceKm / EARTH_RADIUS
 
         val newLatR = asin(sin(latR) * cos(distanceToRadius) +
                 cos(latR) * sin(distanceToRadius) * cos(bearingR))
@@ -30,7 +30,7 @@ object GeoUtils {
 
     //calculate new GeoPose by base on a relativePosition from another GeoPose
     fun getGeoPoseByLocalCoordinateOffset(startPose: GeoPose, offsetPosition: Position): GeoPose {
-        val latLngOnlyX = getLatLngByDistanceAndBearing(startPose.latitude, startPose.longitude, (startPose.heading + 90.0) % 360, offsetPosition.x / 1000.0)
+        val latLngOnlyX = getLatLngByDistanceAndBearing(startPose.latitude, startPose.longitude, (startPose.heading + 90.0).mod(360.0), offsetPosition.x / 1000.0)
 
         val latLng = getLatLngByDistanceAndBearing(latLngOnlyX.latitude, latLngOnlyX.longitude, startPose.heading, -offsetPosition.z / 1000.0)
 
@@ -43,7 +43,7 @@ object GeoUtils {
     //offsetX in meters towards startHeading
     //offsetZ in meters towards startHeading + 90°
     fun getLatLngByLocalCoordinateOffset(startLat: Double, startLng: Double, startHeading: Double, offsetX: Float, offsetZ: Float): LatLng {
-        val latLngOnlyX = getLatLngByDistanceAndBearing(startLat, startLng, (startHeading + 90.0) % 360, offsetX / 1000.0)
+        val latLngOnlyX = getLatLngByDistanceAndBearing(startLat, startLng, (startHeading + 90.0).mod(360.0), offsetX / 1000.0)
 
         return getLatLngByDistanceAndBearing(latLngOnlyX.latitude, latLngOnlyX.longitude, startHeading, -offsetZ / 1000.0)
     }
@@ -80,8 +80,6 @@ object GeoUtils {
 
     //calculate distance in meters between 2 LatLng
     fun distanceBetweenTwoLatLng(start: LatLng, end: LatLng): Double {
-        val earthRadius = 6378.1
-
         val latR1 = Math.toRadians(start.latitude)
         val lngR1 = Math.toRadians(start.longitude)
         val latR2 = Math.toRadians(end.latitude)
@@ -95,7 +93,7 @@ object GeoUtils {
                 sin(dLng / 2) * sin(dLng / 2)
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
 
-        return earthRadius * c * 1000
+        return EARTH_RADIUS * c * 1000
     }
 
     //calculate bearing in degrees between 2 LatLng
@@ -112,6 +110,6 @@ object GeoUtils {
                 sin(latR1) * cos(latR2) * cos(dLng)
         val bearing = atan2(y, x)
 
-        return (Math.toDegrees(bearing) + 360) % 360
+        return (Math.toDegrees(bearing) + 360).mod(360.0)
     }
 }
