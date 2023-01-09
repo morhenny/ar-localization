@@ -221,7 +221,7 @@ class ArMappingFragment : Fragment() {
                     parent = sceneView
                     isVisible = false
                     setModel(modelMap[AXIS])
-                    anchor = placementNode.createAnchor() //TODO monitor how often his causes ARCoreError: Can't attach anchor
+                    anchor = placementNode.createAnchor()
                     anchor?.pose?.let { pose ->
                         anchorHostingCircle.setPosition(pose)
                     }

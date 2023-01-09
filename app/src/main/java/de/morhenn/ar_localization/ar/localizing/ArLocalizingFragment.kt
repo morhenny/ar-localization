@@ -981,8 +981,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
         private const val MIN_HORIZONTAL_ACCURACY = 2.0
         private const val MAX_SIMULTANEOUS_ANCHORS = 40
-        private const val MAPPING_POINT_RENDER_DISTANCE = 8.0
-        private const val ANCHOR_PREVIEW_RENDER_DISTANCE = 10.0
+        private const val MAPPING_POINT_RENDER_DISTANCE = 10.0
+        private const val ANCHOR_PREVIEW_RENDER_DISTANCE = 25.0
         private const val INTERVAL_POSITION_UPDATE = 750L
         private const val INTERVAL_RESOLVE_UPDATE = 5000L
     }

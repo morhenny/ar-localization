@@ -39,6 +39,16 @@ object GeoUtils {
         return GeoPose(latLng.latitude, latLng.longitude, altitude, startPose.heading)
     }
 
+    fun getGeoPoseByLocalCoordinateOffsetWithEastUpSouth(startPose: GeoPose, offsetPosition: Position): GeoPose {
+        val latLngOnlyX = getLatLngByDistanceAndBearing(startPose.latitude, startPose.longitude, 90.0, offsetPosition.x / 1000.0)
+
+        val latLng = getLatLngByDistanceAndBearing(latLngOnlyX.latitude, latLngOnlyX.longitude, 180.0, offsetPosition.z / 1000.0)
+
+        val altitude = startPose.altitude + offsetPosition.y
+
+        return GeoPose(latLng.latitude, latLng.longitude, altitude, startPose.heading)
+    }
+
     //calculate new LatLng with offsetX and offsetZ
     //offsetX in meters towards startHeading
     //offsetZ in meters towards startHeading + 90°

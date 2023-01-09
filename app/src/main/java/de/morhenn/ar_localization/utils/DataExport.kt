@@ -109,7 +109,7 @@ object DataExport {
     fun writeAnchorErrorMapToFile(name: String = "") {
         if (loggingEnabled) {
             Log.d(TAG, "Writing anchor error map to file")
-            fileNameAnchorError = FILE_NAME_ANCHOR_ERROR_PREFIX + currentTimestampString() + "_$name .csv"
+            fileNameAnchorError = FILE_NAME_ANCHOR_ERROR_PREFIX + currentTimestampString() + "_$name.csv"
             FileWriter("$path/$fileNameAnchorError").use {
                 it.write("Distance, Error\n")
                 anchorErrorMap.forEach { (distance, error) ->

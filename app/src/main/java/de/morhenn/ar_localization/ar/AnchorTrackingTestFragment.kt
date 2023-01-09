@@ -51,6 +51,7 @@ class AnchorTrackingTestFragment : Fragment() {
     private val anchorList = mutableListOf<ArNode>()
 
     private lateinit var modelBall: ModelRenderable
+    private lateinit var modelAxis: ModelRenderable
 
     private var lastLogTimeStamp = 0L
 
@@ -68,6 +69,10 @@ class AnchorTrackingTestFragment : Fragment() {
         lifecycleScope.launchWhenCreated {
             modelBall = ModelRenderable.builder()
                 .setSource(context, Uri.parse("models/icoSphere.glb"))
+                .setIsFilamentGltf(true)
+                .await(lifecycle)
+            modelAxis = ModelRenderable.builder()
+                .setSource(context, Uri.parse("models/axis.glb"))
                 .setIsFilamentGltf(true)
                 .await(lifecycle)
         }
@@ -97,7 +102,11 @@ class AnchorTrackingTestFragment : Fragment() {
                         if (timeSinceLastLog > loggingInterval) {
                             initialAnchorGeoPose?.let {
                                 val cameraAsLocalPositionOfInitial = anchorList.first().worldToLocalPosition(frame.camera.pose.position.toVector3()).toFloat3()
-                                DataExport.addAnchorTrackingData(GeoUtils.getGeoPoseByLocalCoordinateOffset(it, cameraAsLocalPositionOfInitial), earth.cameraGeospatialPose)
+                                if (anchorList.size == 1) {
+                                    DataExport.addAnchorTrackingData(it, earth.cameraGeospatialPose)
+                                } else {
+                                    DataExport.addAnchorTrackingData(GeoUtils.getGeoPoseByLocalCoordinateOffsetWithEastUpSouth(it, cameraAsLocalPositionOfInitial), earth.cameraGeospatialPose)
+                                }
                                 lastLogTimeStamp = System.currentTimeMillis()
                             }
                         }
@@ -149,14 +158,14 @@ class AnchorTrackingTestFragment : Fragment() {
             val initialAnchor = ArModelNode(PlacementMode.DISABLED).apply {
                 parent = sceneView
                 with(earth.cameraGeospatialPose) {
-                    val poseFromCamera = frame.camera.pose.position
-                    with(poseFromCamera) {
-                        this@apply.position = this
-                        lastAnchorPosition = this
+                    val poseFromEarth = earth.getPose(latitude, longitude, altitude, eastUpSouthQuaternion[0], 0f, eastUpSouthQuaternion[2], 0f)
+                    with(poseFromEarth) {
+                        this@apply.pose = this
+                        lastAnchorPosition = this.position
                     }
                     initialAnchorGeoPose = GeoPose(latitude, longitude, altitude, heading)
                 }
-                setModel(modelBall)
+                setModel(modelAxis)
                 anchor()
             }
             anchorList.add(initialAnchor)
