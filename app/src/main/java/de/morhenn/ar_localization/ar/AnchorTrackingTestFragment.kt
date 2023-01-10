@@ -158,7 +158,7 @@ class AnchorTrackingTestFragment : Fragment() {
             val initialAnchor = ArModelNode(PlacementMode.DISABLED).apply {
                 parent = sceneView
                 with(earth.cameraGeospatialPose) {
-                    val poseFromEarth = earth.getPose(latitude, longitude, altitude, eastUpSouthQuaternion[0], 0f, eastUpSouthQuaternion[2], 0f)
+                    val poseFromEarth = earth.getPose(latitude, longitude, altitude, 0f, 0f, 0f, 0f)
                     with(poseFromEarth) {
                         this@apply.pose = this
                         lastAnchorPosition = this.position
