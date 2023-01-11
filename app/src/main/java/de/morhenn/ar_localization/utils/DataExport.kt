@@ -106,6 +106,10 @@ object DataExport {
         vpsAnchorTestList.add(vpsPose)
     }
 
+    fun isAnchorTrackingDataEmpty(): Boolean {
+        return cpsAnchorTestList.isEmpty()
+    }
+
     fun writeAnchorErrorMapToFile(name: String = "") {
         if (loggingEnabled) {
             Log.d(TAG, "Writing anchor error map to file")

@@ -90,7 +90,7 @@ class AnchorTrackingTestFragment : Fragment() {
 
         sceneView.onArFrame = { frame ->
             earth?.let { earth ->
-                if (earth.trackingState == TrackingState.TRACKING) {
+                if (earth.trackingState == TrackingState.TRACKING && frame.camera.trackingState == TrackingState.TRACKING) {
                     binding.arAnchorTrackingTestGeospatialAccuracy.updateView(earth.cameraGeospatialPose)
 
                     if (runningTest) {
@@ -101,10 +101,10 @@ class AnchorTrackingTestFragment : Fragment() {
                         val timeSinceLastLog = System.currentTimeMillis() - lastLogTimeStamp
                         if (timeSinceLastLog > loggingInterval) {
                             initialAnchorGeoPose?.let {
-                                val cameraAsLocalPositionOfInitial = anchorList.first().worldToLocalPosition(frame.camera.pose.position.toVector3()).toFloat3()
-                                if (anchorList.size == 1) {
+                                if (DataExport.isAnchorTrackingDataEmpty()) {
                                     DataExport.addAnchorTrackingData(it, earth.cameraGeospatialPose)
                                 } else {
+                                    val cameraAsLocalPositionOfInitial = anchorList.first().worldToLocalPosition(frame.camera.pose.position.toVector3()).toFloat3()
                                     DataExport.addAnchorTrackingData(GeoUtils.getGeoPoseByLocalCoordinateOffsetWithEastUpSouth(it, cameraAsLocalPositionOfInitial), earth.cameraGeospatialPose)
                                 }
                                 lastLogTimeStamp = System.currentTimeMillis()
@@ -125,23 +125,27 @@ class AnchorTrackingTestFragment : Fragment() {
             arAnchorTrackingTestFab.setOnClickListener {
                 earth?.let {
                     if (!runningTest) {
-                        runningTest = true
+                        if (it.cameraGeospatialPose.latitude != 0.0) {
+                            runningTest = true
 
-                        anchorPlacementDistance = if (!anchorTrackingTestDistance.text.isNullOrBlank()) {
-                            anchorTrackingTestDistance.text.toString().toFloat()
-                        } else {
-                            DEFAULT_DISTANCE_BETWEEN_ANCHOR_PLACEMENTS
-                        }
-                        loggingInterval = if (!anchorTrackingTestInterval.text.isNullOrBlank()) {
-                            anchorTrackingTestInterval.text.toString().toLong()
-                        } else {
-                            DEFAULT_LOG_INTERVAL
-                        }
-                        anchorTrackingTestDistance.isEnabled = false
-                        anchorTrackingTestInterval.isEnabled = false
+                            anchorPlacementDistance = if (!anchorTrackingTestDistance.text.isNullOrBlank()) {
+                                anchorTrackingTestDistance.text.toString().toFloat()
+                            } else {
+                                DEFAULT_DISTANCE_BETWEEN_ANCHOR_PLACEMENTS
+                            }
+                            loggingInterval = if (!anchorTrackingTestInterval.text.isNullOrBlank()) {
+                                anchorTrackingTestInterval.text.toString().toLong()
+                            } else {
+                                DEFAULT_LOG_INTERVAL
+                            }
+                            anchorTrackingTestDistance.isEnabled = false
+                            anchorTrackingTestInterval.isEnabled = false
 
-                        binding.anchorTestProgressBar.visibility = View.VISIBLE
-                        binding.arAnchorTrackingTestFab.text = getString(R.string.test_finish)
+                            binding.anchorTestProgressBar.visibility = View.VISIBLE
+                            binding.arAnchorTrackingTestFab.text = getString(R.string.test_finish)
+                        } else {
+                            Toast.makeText(context, "Please wait until the geospatial api has found a position", Toast.LENGTH_SHORT).show()
+                        }
                     } else {
                         DataExport.writeAnchorTrackingDataToFile(anchorPlacementDistance, loggingInterval)
                         findNavController().popBackStack()
@@ -184,13 +188,18 @@ class AnchorTrackingTestFragment : Fragment() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        anchorList.forEach {
+            it.detachAnchor()
+            it.destroy()
+            it.parent = null
+        }
+    }
+
     companion object {
         private const val TAG = "AnchorTrackingTestFragment"
-        private const val DEFAULT_DISTANCE_BETWEEN_ANCHOR_PLACEMENTS = 2.0f
+        private const val DEFAULT_DISTANCE_BETWEEN_ANCHOR_PLACEMENTS = 5.0f
         private const val DEFAULT_LOG_INTERVAL = 1000L
     }
-}
-
-fun GeospatialPose.toGeoPose(): GeoPose {
-    return GeoPose(latitude, longitude, altitude, heading)
 }
