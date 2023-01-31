@@ -68,6 +68,7 @@ import io.github.sceneview.math.Position
 import io.github.sceneview.math.toFloat3
 import io.github.sceneview.math.toVector3
 import io.github.sceneview.model.await
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
@@ -128,8 +129,10 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var geospatialPositionMarker: Marker? = null
     private var currentResolvedMapMarker: Marker? = null
 
-    private var lastPositionUpdate: Long = 0
-    private var lastResolveUpdate: Long = 0
+    private var lastPositionUpdate = 0L
+    private var lastResolveUpdate = 0L
+    private var lastUserPoseCalculation = 0L
+    private var delayNextPositionUpdate = 500L
 
     private var maxResolvingAmountWhileTracking = 5
     private var maxResolvingAmountOnSelected = MAX_SIMULTANEOUS_ANCHORS
@@ -137,6 +140,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     private var lastLocation: Location? = null
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private lateinit var userIcon: BitmapDescriptor
+    private lateinit var geospatialIcon: BitmapDescriptor
 
     private var requestingLocationUpdates = false
     private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_BALANCED_POWER_ACCURACY, INTERVAL_POSITION_UPDATE).build()
@@ -215,14 +221,21 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             Log.d(TAG, "Geospatial API initialized and earth object assigned")
         }
         if (arState == TRACKING) {
-            calculateUserPose()
 
             val currentMillis = System.currentTimeMillis()
             if (currentMillis - lastResolveUpdate > trackingResolveInterval) {
                 lastResolveUpdate = currentMillis
                 findNextCloudAnchorAndResolve()
             }
-            if (currentMillis - lastPositionUpdate > INTERVAL_POSITION_UPDATE) {
+            if (currentMillis - lastUserPoseCalculation > INTERVAL_USER_POSE_CALCULATION) {
+                lastUserPoseCalculation = currentMillis
+                lifecycleScope.launch {
+                    calculateUserPose()
+                }
+            }
+            val timeSinceLastPositionUpdate = currentMillis - lastPositionUpdate
+            if (timeSinceLastPositionUpdate > INTERVAL_POSITION_UPDATE && timeSinceLastPositionUpdate > delayNextPositionUpdate) {
+                delayNextPositionUpdate = 0L
                 userPose?.let { CameraUpdateFactory.newLatLng(it.getLatLng()) }?.let { map?.moveCamera(it) }
 
                 lastPositionUpdate = currentMillis
@@ -273,7 +286,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 cameraGeoPoseFromAnchor.heading = (cameraGeoPoseFromAnchor.heading.mod(360.0) + cameraHeadingRelativeToAnchorHeading.mod(360.0)).mod(360.0)
 
                 map?.let { map ->
-                    val userIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_navigation_24_green, requireContext()))
                     userPositionMarker?.let {
                         it.position = cameraGeoPoseFromAnchor.getLatLng()
                         it.rotation = cameraGeoPoseFromAnchor.heading.toFloat()
@@ -282,7 +294,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     }
 
                     earth?.let {
-                        val geospatialIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_navigation_24_red, requireContext()))
                         val earthLatLng = LatLng(it.cameraGeospatialPose.latitude, it.cameraGeospatialPose.longitude)
                         geospatialPositionMarker?.let { marker ->
                             marker.position = earthLatLng
@@ -318,23 +329,29 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 potentiallyAlreadyCurrentNode?.let {
                     newRenderedMappingPoints.add(it)
                 } ?: run {
-                    val node = ArNode().apply {
-                        this.parent = currentCloudAnchorNode
-                        this.position = relativePositionOfMappingPointToCurrentAnchor
-                        setModel(modelMap[BALL])
+                    val node = ArNode()
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        node.apply {
+                            this.parent = currentCloudAnchorNode
+                            this.position = relativePositionOfMappingPointToCurrentAnchor
+                            setModel(modelMap[BALL])
+                        }
                     }
                     newRenderedMappingPoints.add(node)
                 }
             }
         }
+
         val mappingPointsToRemove = mutableListOf<ArNode>()
         currentRenderedMappingPoints.forEach {
             if (newRenderedMappingPoints.contains(it)) {
                 newRenderedMappingPoints.remove(it)
             } else {
-                it.detachAnchor()
-                it.parent = null
-                it.destroy()
+                lifecycleScope.launch(Dispatchers.Main) {
+                    it.detachAnchor()
+                    it.parent = null
+                    it.destroy()
+                }
                 mappingPointsToRemove.add(it)
             }
         }
@@ -357,11 +374,14 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     previewAnchorMap[it] = arNode
                     newAnchorPreviews.add(arNode)
                 } ?: run {
-                    val node = ArNode().apply {
-                        previewAnchorMap[it] = this
-                        this.parent = currentCloudAnchorNode
-                        this.position = relativePositionToCurrentTrackingAnchor
-                        setModel(modelMap[ANCHOR_TRACKING_PREVIEW])
+                    val node = ArNode()
+                    lifecycleScope.launch(Dispatchers.Main) {
+                        node.apply {
+                            previewAnchorMap[it] = this
+                            this.parent = currentCloudAnchorNode
+                            this.position = relativePositionToCurrentTrackingAnchor
+                            setModel(modelMap[ANCHOR_TRACKING_PREVIEW])
+                        }
                     }
                     newAnchorPreviews.add(node)
                 }
@@ -383,6 +403,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun initializeUIElements() {
+        userIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_navigation_24_green, requireContext()))
+        geospatialIcon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_baseline_navigation_24_red, requireContext()))
+
         bottomSheetBehavior = BottomSheetBehavior.from(binding.arLocalizingBottomSheet)
         requireActivity().window.setSoftInputMode(LayoutParams.SOFT_INPUT_ADJUST_PAN)
 
@@ -520,7 +543,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             }
             arLocalizingBottomSheetEditResolveAroundSelected.apply {
                 setText(maxResolvingAmountOnSelected.toString())
-                doOnTextChanged { text, start, before, count ->
+                doOnTextChanged { text, _, _, _ ->
                     if (text.toString().isNotEmpty()) {
                         maxResolvingAmountOnSelected = text.toString().toInt()
                     }
@@ -528,7 +551,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             }
             arLocalizingBottomSheetEditResolveTracking.apply {
                 setText(maxResolvingAmountWhileTracking.toString())
-                doOnTextChanged { text, start, before, count ->
+                doOnTextChanged { text, _, _, _ ->
                     if (text.toString().isNotEmpty()) {
                         maxResolvingAmountWhileTracking = text.toString().toInt()
                     }
@@ -536,7 +559,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             }
             arLocalizingBottomSheetEditTrackingInterval.apply {
                 setText(trackingResolveInterval.toString())
-                doOnTextChanged { text, start, before, count ->
+                doOnTextChanged { text, _, _, _ ->
                     if (text.toString().isNotEmpty()) {
                         trackingResolveInterval = text.toString().toLong()
                     }
@@ -714,7 +737,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     this.anchor = anchor
                     setModel(modelMap[ANCHOR_RESOLVED])
 
-                    lastPositionUpdate = System.currentTimeMillis() //Wait a short moment for the next position update, until the new anchor is fully loaded
+                    delayNextPositionUpdate = DELAY_POSITION_UPDATE
                     lastCloudAnchorNode = currentCloudAnchorNode
                     currentCloudAnchorNode = this
                     lastCloudAnchor = currentCloudAnchor
@@ -725,7 +748,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                         anchorListAdapter.indicateResolved(it)
 
                         lifecycleScope.launch {
-                            delay(500) //wait for the node to show at the correct position
+                            delay(DELAY_POSITION_UPDATE) //wait for the node to show at the correct position
                             isVisible = true
                             removeCloudAnchorPreviews(previewAnchorMap[it])
                         }
@@ -981,9 +1004,11 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
         private const val MIN_HORIZONTAL_ACCURACY = 2.0
         private const val MAX_SIMULTANEOUS_ANCHORS = 40
-        private const val MAPPING_POINT_RENDER_DISTANCE = 10.0
-        private const val ANCHOR_PREVIEW_RENDER_DISTANCE = 25.0
+        private const val MAPPING_POINT_RENDER_DISTANCE = 8.0
+        private const val ANCHOR_PREVIEW_RENDER_DISTANCE = 15.0
         private const val INTERVAL_POSITION_UPDATE = 750L
+        private const val INTERVAL_USER_POSE_CALCULATION = 100L
         private const val INTERVAL_RESOLVE_UPDATE = 5000L
+        private const val DELAY_POSITION_UPDATE = 1000L
     }
 }
