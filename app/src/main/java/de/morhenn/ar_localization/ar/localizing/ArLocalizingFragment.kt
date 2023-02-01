@@ -677,7 +677,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
-    private fun removeCloudAnchorPreviews(resolvedPreviewNode: ArNode? = null) {
+    private fun removeCloudAnchorPreviews(resolvedPreviewNode: ArNode? = null, lastAnchor: ArNode? = null, resolvedAnchor: ArNode? = null, posOfResolvedPreview: Position? = null) {
         if (earthNodeList.isNotEmpty()) {
             Log.d(TAG, "Removing all earth nodes")
             earthNodeList.forEach {
@@ -689,12 +689,16 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
         resolvedPreviewNode?.let {
             Log.d(TAG, "Removing resolve preview anchor node")
-            val previewPos = it.worldPosition
-            val posOffsetFromPreviewToCloudAnchor = currentCloudAnchorNode!!.worldPosition.minus(previewPos) //maybe useful for other test cases
-            val distanceFromPreviewToCloudAnchor = GeoUtils.distanceBetweenTwo3dCoordinates(previewPos, currentCloudAnchorNode!!.worldPosition)
-            lastCloudAnchorNode?.let { lastAnchor ->
-                val distanceToLast = GeoUtils.distanceBetweenTwo3dCoordinates(currentCloudAnchorNode!!.worldPosition, lastAnchor.worldPosition)
-                DataExport.addAnchorErrorSet(distanceToLast, distanceFromPreviewToCloudAnchor)
+            val previewPos = posOfResolvedPreview!!
+
+            lastAnchor?.let { lastAnchor ->
+                resolvedAnchor?.let { resolvedAnchor ->
+                    //val posOffsetFromPreviewToCloudAnchor = resolvedAnchor.worldPosition.minus(previewPos) //maybe useful for other test cases
+
+                    val distanceFromPreviewToCloudAnchor = GeoUtils.distanceBetweenTwo3dCoordinates(previewPos, resolvedAnchor.worldPosition)
+                    val distanceToLast = GeoUtils.distanceBetweenTwo3dCoordinates(resolvedAnchor.worldPosition, lastAnchor.worldPosition)
+                    DataExport.addAnchorErrorSet(distanceToLast, distanceFromPreviewToCloudAnchor)
+                }
             }
 
             it.detachAnchor()
@@ -747,10 +751,17 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                         filteredCloudAnchorList.add(0, it)
                         anchorListAdapter.indicateResolved(it)
 
+                        userPose?.let { pose ->
+                            DataExport.addResolvePoint(pose, it.text)
+                        }
+
+                        val previewAnchor = previewAnchorMap[it]
+                        val previewPos = previewAnchor?.worldPosition
+                        val lastAnchor = lastCloudAnchorNode
                         lifecycleScope.launch {
                             delay(DELAY_POSITION_UPDATE) //wait for the node to show at the correct position
                             isVisible = true
-                            removeCloudAnchorPreviews(previewAnchorMap[it])
+                            removeCloudAnchorPreviews(previewAnchor, lastAnchor, this@apply, previewPos)
                         }
                     }
                     binding.arLocalizingBottomSheetCurrentlyResolved.text = getString(R.string.ar_localizing_currently_resolved, currentCloudAnchor?.text)

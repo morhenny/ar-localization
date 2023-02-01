@@ -44,6 +44,8 @@ object DataExport {
 
     private var mapAnchors = mutableListOf<CloudAnchor>()
 
+    private var resolvePointList = mutableListOf<Pair<GeoPose, String>>()
+
     private var vpsList = mutableListOf<GeospatialPose>()
     private var cpsList = mutableListOf<GeoPose>()
     private var gpsList = mutableListOf<Location>()
@@ -120,8 +122,8 @@ object DataExport {
                     it.write("$distance, $error\n")
                 }
                 it.close()
+                anchorErrorMap.clear()
             }
-            anchorErrorMap.clear()
         }
     }
 
@@ -248,6 +250,25 @@ object DataExport {
                 text("00FF00")
                 endTag(null, "color")
                 endTag(null, "LineStyle")
+                startTag(null, "IconStyle")
+                startTag(null, "color")
+                text("FF00FF00")
+                endTag(null, "color")
+                startTag(null, "scale")
+                text("1")
+                endTag(null, "scale")
+                startTag(null, "Icon")
+                startTag(null, "href")
+                text("https://www.gstatic.com/mapspro/images/stock/503-wht-blank_maps.png")
+                endTag(null, "href")
+                endTag(null, "Icon")
+                startTag(null, "hotSpot")
+                attribute(null, "x", "32")
+                attribute(null, "xunits", "pixels")
+                attribute(null, "y", "64")
+                attribute(null, "yunits", "insetPixels")
+                endTag(null, "hotSpot")
+                endTag(null, "IconStyle")
                 endTag(null, "Style")
                 startTag(null, "Style")
                 attribute(null, "id", "vpsStyle")
@@ -275,6 +296,7 @@ object DataExport {
                 appendLocalizingCPSPoints()
                 appendLocalizingVPSPoints()
                 appendLocalizingGPSPoints()
+                appendResolvePoints()
                 with(xmlLocalize) {
                     endTag(null, "Document")
                     endTag(null, "kml")
@@ -294,6 +316,35 @@ object DataExport {
             vpsList.add(vpsPose)
             cpsList.add(cpsPose)
             gpsList.add(gpsPose)
+        }
+    }
+
+    fun addResolvePoint(geoPose: GeoPose, anchorName: String) {
+        if (loggingEnabled) {
+            resolvePointList.add(Pair(geoPose, anchorName))
+        }
+    }
+
+    private fun appendResolvePoints() {
+        with(xmlLocalize) {
+            resolvePointList.forEach {
+                startTag(null, "Placemark")
+                startTag(null, "name")
+                text("Resolved: ${it.second}")
+                endTag(null, "name")
+                startTag(null, "styleUrl")
+                text("#cpsStyle")
+                endTag(null, "styleUrl")
+                startTag(null, "Point")
+                startTag(null, "altitudeMode")
+                text("absolute")
+                endTag(null, "altitudeMode")
+                startTag(null, "coordinates")
+                text("${it.first.longitude},${it.first.latitude},${it.first.altitude}")
+                endTag(null, "coordinates")
+                endTag(null, "Point")
+                endTag(null, "Placemark")
+            }
         }
     }
 
