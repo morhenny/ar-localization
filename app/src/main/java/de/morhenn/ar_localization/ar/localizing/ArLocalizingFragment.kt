@@ -466,7 +466,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         with(binding) {
             arLocalizingBottomSheetAutoModeButton.setOnClickListener {
                 if (arState == NOT_INITIALIZED || arState == RESOLVING) {
-                    if (floorPlan.cloudAnchorList.size < maxResolvingAmountOnSelected - 1) {
+                    if (floorPlan.cloudAnchorList.size < maxResolvingAmountOnSelected) {
                         Log.d(TAG, "Auto mode button clicked, starting to resolve all anchors simulataneously")
 
                         updateResolveButtons(AUTO)
@@ -795,7 +795,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun getAnchorsOnSpecificFloor(floor: Int): List<CloudAnchor> {
         val listOfAnchors = mutableListOf<CloudAnchor>()
         floorPlan.cloudAnchorList.forEach {
-            if (it.floor == floor && listOfAnchors.size < maxResolvingAmountOnSelected - 1) {
+            if (it.floor == floor && listOfAnchors.size < maxResolvingAmountOnSelected) {
                 listOfAnchors.add(it)
             }
         }
@@ -822,7 +822,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             add(floorPlan.mainAnchor)
         }
 
-        while (tempCloudAnchorList.size > maxResolvingAmountOnSelected - 1) {
+        while (tempCloudAnchorList.size > maxResolvingAmountOnSelected) {
             tempCloudAnchorList.remove(tempCloudAnchorList.maxBy {
                 GeoUtils.distanceBetweenTwoWorldCoordinates(lat, lng, alt, it.lat, it.lng, it.alt)
             })
@@ -834,9 +834,10 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         val tempCloudAnchorList = mutableListOf<CloudAnchor>()
         tempCloudAnchorList.add(floorPlan.mainAnchor)
         tempCloudAnchorList.addAll(floorPlan.cloudAnchorList)
+        tempCloudAnchorList.remove(currentCloudAnchor)
 
         userPose?.let { user ->
-            while (tempCloudAnchorList.size > maxResolvingAmountWhileTracking - 1) {
+            while (tempCloudAnchorList.size > maxResolvingAmountWhileTracking) {
                 tempCloudAnchorList.remove(tempCloudAnchorList.maxBy {
                     GeoUtils.distanceBetweenTwoWorldCoordinates(user.latitude, user.longitude, user.altitude, it.lat, it.lng, it.alt)
                 })
