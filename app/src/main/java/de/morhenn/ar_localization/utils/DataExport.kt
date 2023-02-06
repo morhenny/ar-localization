@@ -6,6 +6,7 @@ import android.util.Log
 import com.google.ar.core.GeospatialPose
 import de.morhenn.ar_localization.model.CloudAnchor
 import de.morhenn.ar_localization.model.GeoPose
+import io.github.sceneview.math.Position
 import org.xmlpull.v1.XmlPullParserFactory
 import org.xmlpull.v1.XmlSerializer
 import java.io.FileWriter
@@ -40,7 +41,8 @@ object DataExport {
     private lateinit var xmlLocalize: XmlSerializer
     private lateinit var xmlAnchorTest: XmlSerializer
 
-    private var anchorErrorMap = mutableListOf<Pair<Float, Float>>() //error per distance
+    private var anchorErrorDistanceMap = mutableListOf<Pair<Float, Float>>() //error per distance
+    private var anchorErrorOffsetMap = mutableListOf<Pair<Float, Position>>() //error offset per distance
 
     private var mapAnchors = mutableListOf<CloudAnchor>()
 
@@ -112,17 +114,19 @@ object DataExport {
         return cpsAnchorTestList.isEmpty()
     }
 
-    fun writeAnchorErrorMapToFile(name: String = "") {
+    fun writeAnchorErrorToFile(name: String = "") {
         if (loggingEnabled) {
-            Log.d(TAG, "Writing anchor error map to file")
+            Log.d(TAG, "Writing anchor error distance to file")
             fileNameAnchorError = FILE_NAME_ANCHOR_ERROR_PREFIX + currentTimestampString() + "_$name.csv"
             FileWriter("$path/$fileNameAnchorError").use {
-                it.write("Distance, Error\n")
-                anchorErrorMap.forEach { (distance, error) ->
-                    it.write("$distance, $error\n")
+                it.write("Distance, ErrorDistance, ErrorX, ErrorY, ErrorZ\n")
+                for (i in 0 until anchorErrorOffsetMap.size) {
+                    it.write("${anchorErrorDistanceMap[i].first}, ${anchorErrorDistanceMap[i].second}, ${anchorErrorOffsetMap[i].second.x}, ${anchorErrorOffsetMap[i].second.y}, ${anchorErrorOffsetMap[i].second.z}\n")
                 }
+
                 it.close()
-                anchorErrorMap.clear()
+                anchorErrorDistanceMap.clear()
+                anchorErrorOffsetMap.clear()
             }
         }
     }
@@ -130,7 +134,14 @@ object DataExport {
     fun addAnchorErrorSet(distance: Float, error: Float) {
         if (loggingEnabled) {
             Log.d(TAG, "addAnchorErrorSet: $distance, $error")
-            anchorErrorMap.add(Pair(distance, error))
+            anchorErrorDistanceMap.add(Pair(distance, error))
+        }
+    }
+
+    fun addAnchorErrorOffset(distanceToLast: Float, posOffsetFromPreviewToCloudAnchor: Position) {
+        if (loggingEnabled) {
+            Log.d(TAG, "addAnchorErrorOffset: $distanceToLast, $posOffsetFromPreviewToCloudAnchor")
+            anchorErrorOffsetMap.add(Pair(distanceToLast, posOffsetFromPreviewToCloudAnchor))
         }
     }
 
@@ -225,13 +236,17 @@ object DataExport {
         }
     }
 
-    fun startNewLocalizingFile() {
+    fun startNewLocalizingFile(name: String? = null) {
         if (loggingEnabled) {
             if (hasOpenLocalizingFile) {
                 finishLocalizingFile()
             }
             hasOpenLocalizingFile = true
-            fileNameLocalizing = "$path/$FILE_NAME_LOCALIZING_PREFIX" + currentTimestampString() + ".kml"
+            name?.let {
+                fileNameLocalizing = "$path/$FILE_NAME_LOCALIZING_PREFIX" + currentTimestampString() + "_$name.kml"
+            } ?: run {
+                fileNameLocalizing = "$path/$FILE_NAME_LOCALIZING_PREFIX" + currentTimestampString() + ".kml"
+            }
             Log.d(TAG, "Creating new Localizing file at: $fileNameLocalizing")
 
             fileWriterLocalizing = FileWriter(fileNameLocalizing, true)

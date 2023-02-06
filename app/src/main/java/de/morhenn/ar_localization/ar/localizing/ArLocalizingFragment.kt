@@ -174,6 +174,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                 add(floorPlan.mainAnchor)
                 addAll(floorPlan.cloudAnchorList)
             }
+            DataExport.startNewLocalizingFile(floorPlan.name)
         } ?: run {
             Log.e(TAG, "No floor plan found in arLocalizing, something went really wrong")
             findNavController().popBackStack()
@@ -693,11 +694,12 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
             lastAnchor?.let { lastAnchor ->
                 resolvedAnchor?.let { resolvedAnchor ->
-                    //val posOffsetFromPreviewToCloudAnchor = resolvedAnchor.worldPosition.minus(previewPos) //maybe useful for other test cases
+                    val posOffsetFromPreviewToCloudAnchor = resolvedAnchor.worldPosition.minus(previewPos) //maybe useful for other test cases
 
                     val distanceFromPreviewToCloudAnchor = GeoUtils.distanceBetweenTwo3dCoordinates(previewPos, resolvedAnchor.worldPosition)
                     val distanceToLast = GeoUtils.distanceBetweenTwo3dCoordinates(resolvedAnchor.worldPosition, lastAnchor.worldPosition)
                     DataExport.addAnchorErrorSet(distanceToLast, distanceFromPreviewToCloudAnchor)
+                    DataExport.addAnchorErrorOffset(distanceToLast, posOffsetFromPreviewToCloudAnchor)
                 }
             }
 
@@ -1000,7 +1002,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     override fun onStop() {
         super.onStop()
-        DataExport.writeAnchorErrorMapToFile(floorPlan.name)
+        DataExport.writeAnchorErrorToFile(floorPlan.name)
         DataExport.finishLocalizingFile()
     }
 
