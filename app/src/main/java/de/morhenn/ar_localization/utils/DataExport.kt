@@ -237,6 +237,9 @@ object DataExport {
     }
 
     fun startNewLocalizingFile(name: String? = null) {
+        anchorErrorOffsetMap.clear()
+        anchorErrorDistanceMap.clear()
+        resolvePointList.clear()
         if (loggingEnabled) {
             if (hasOpenLocalizingFile) {
                 finishLocalizingFile()
@@ -361,6 +364,7 @@ object DataExport {
                 endTag(null, "Placemark")
             }
         }
+        resolvePointList.clear()
     }
 
     private fun appendLocalizingCPSPoints() {
