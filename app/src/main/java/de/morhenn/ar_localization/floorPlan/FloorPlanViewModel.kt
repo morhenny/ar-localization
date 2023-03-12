@@ -68,10 +68,9 @@ class FloorPlanViewModel : ViewModel() {
         }
     }
 
-    fun refreshFloorPlanList(sortByName: Boolean) {
+    fun refreshFloorPlanList() {
         viewModelScope.launch {
-            _floorPlans.value = if (sortByName) FirebaseFloorPlanService.getFloorPlanListByName()
-            else FirebaseFloorPlanService.getFloorPlanList()
+            _floorPlans.value = FirebaseFloorPlanService.getFloorPlanListByName()
         }
     }
 
@@ -105,7 +104,8 @@ class FloorPlanViewModel : ViewModel() {
                 MappingPoint(13.20f, 0f, -20.346f),
                 MappingPoint(16.467f, 0f, -19.152f),
                 MappingPoint(19.588f, 0f, -18.082f),
-                MappingPoint(24.010f, 0f, -16.544f)),
+                MappingPoint(24.010f, 0f, -16.544f)
+            ),
             mutableListOf(CloudAnchor("first", 0, "noRealID", 52.5120557, 13.325830, 70.318, 157.51))
         )
         addFloorPlan(floorPlan)

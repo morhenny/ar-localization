@@ -95,12 +95,11 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
         recyclerView = binding.floorPlanList
         layoutManager = LinearLayoutManager(requireContext())
         recyclerView.layoutManager = layoutManager
-        listAdapter = FloorPlanListAdapter(::showDialogToDelete, ::showDialogToUpdate, ::localizeSelectedFloorPlan, ::onSelectedFloorPlanChanged)
+        listAdapter = FloorPlanListAdapter(currentFloorPlans, ::showDialogToDelete, ::showDialogToUpdate, ::localizeSelectedFloorPlan, ::onSelectedFloorPlanChanged)
 
         viewModelFloorPlan.floorPlans.observe(viewLifecycleOwner) {
-            listAdapter.submitList(it)
-            listAdapter.notifyItemRangeChanged(0, listAdapter.itemCount)
             currentFloorPlans = it
+            listAdapter.updateFloorPlans(it)
         }
         recyclerView.adapter = listAdapter
         recyclerView.itemAnimator?.changeDuration = 0
@@ -141,7 +140,7 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                     R.id.sort_floor_plans_by_name -> {
                         menuItem.isChecked = true
                         viewModelFloorPlan.lastLocation = null
-                        viewModelFloorPlan.refreshFloorPlanList(true)
+                        viewModelFloorPlan.refreshFloorPlanList()
                         listAdapter.resetExpanded()
                         sortByLocation = false
                     }
@@ -150,13 +149,6 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                         listAdapter.currentLocation?.let { viewModelFloorPlan.sortListByNewLocation(it) }
                         listAdapter.resetExpanded()
                         sortByLocation = true
-                    }
-                    R.id.sort_floor_plans_by_created -> {
-                        viewModelFloorPlan.lastLocation = null
-                        menuItem.isChecked = true
-                        viewModelFloorPlan.refreshFloorPlanList(false)
-                        listAdapter.resetExpanded()
-                        sortByLocation = false
                     }
                     R.id.setting_enable_logging -> {
                         menuItem.isChecked = !menuItem.isChecked
@@ -207,10 +199,10 @@ class FloorPlanListFragment : Fragment(), OnMapReadyCallback {
                     binding.floorPlanMap.visibility = View.VISIBLE
                     layoutManager.scrollToPositionWithOffset(pos, 150)
                     if (!waitingOnInitialMapLoad) {
-                        showFloorPlanOnMap(listAdapter.currentList[pos], map, requireContext(), 200)
+                        showFloorPlanOnMap(currentFloorPlans[pos], map, requireContext(), 200)
                     }
                 } else {
-                    showFloorPlanOnMap(listAdapter.currentList[pos], map, requireContext(), 200)
+                    showFloorPlanOnMap(currentFloorPlans[pos], map, requireContext(), 200)
                 }
             }
         }

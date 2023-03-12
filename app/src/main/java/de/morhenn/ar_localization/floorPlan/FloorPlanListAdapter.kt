@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -15,11 +14,12 @@ import de.morhenn.ar_localization.databinding.ItemFloorPlanListBinding
 import de.morhenn.ar_localization.model.FloorPlan
 
 class FloorPlanListAdapter(
+    var floorPlans: List<FloorPlan>,
     val onDeleteItem: (item: FloorPlan) -> Unit,
     val onUpdateItem: (item: FloorPlan) -> Unit,
     val onLocalizeItem: (item: FloorPlan) -> Unit,
     val onSelectItem: () -> Unit,
-) : ListAdapter<FloorPlan, FloorPlanListAdapter.ViewHolder>(FloorPlanDiffCallback) {
+) : RecyclerView.Adapter<FloorPlanListAdapter.ViewHolder>() {
 
     var expandedPosition = -1
 
@@ -30,8 +30,12 @@ class FloorPlanListAdapter(
         return ViewHolder(binding)
     }
 
+    override fun getItemCount(): Int {
+        return floorPlans.size
+    }
+
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        holder.bind(floorPlans[position])
         if (position == expandedPosition) {
             holder.expandArea.visibility = View.VISIBLE
             holder.expandIcon.setImageDrawable(ContextCompat.getDrawable(holder.itemView.context, R.drawable.ic_baseline_arrow_drop_up_24))
@@ -49,7 +53,7 @@ class FloorPlanListAdapter(
             notifyItemChanged(position)
         }
         Firebase.auth.currentUser?.let {
-            with((it.uid == getItem(position).ownerUID)) {
+            with((it.uid == floorPlans[position].ownerUID)) {
                 holder.buttonDelete.visibility = if (this) View.VISIBLE else View.GONE
                 holder.buttonUpdate.visibility = if (this) View.VISIBLE else View.GONE
                 holder.textOwner.visibility = if (this) View.VISIBLE else View.GONE
@@ -58,8 +62,8 @@ class FloorPlanListAdapter(
 
         currentLocation?.let {
             val loc = Location("")
-            loc.latitude = getItem(position).mainAnchor.lat
-            loc.longitude = getItem(position).mainAnchor.lng
+            loc.latitude = floorPlans[position].mainAnchor.lat
+            loc.longitude = floorPlans[position].mainAnchor.lng
             val distance = it.distanceTo(loc)
             if (distance > 1000) {
                 holder.textDistance.text = String.format("%.1f km", distance / 1000)
@@ -70,15 +74,15 @@ class FloorPlanListAdapter(
 
         with(holder) {
             buttonDelete.setOnClickListener {
-                onDeleteItem(getItem(position))
+                onDeleteItem(floorPlans[position])
                 expandedPosition = -1
                 onSelectItem()
             }
             buttonUpdate.setOnClickListener {
-                onUpdateItem(getItem(position))
+                onUpdateItem(floorPlans[position])
             }
             buttonLocalize.setOnClickListener {
-                onLocalizeItem(getItem(position))
+                onLocalizeItem(floorPlans[position])
             }
         }
     }
@@ -90,6 +94,18 @@ class FloorPlanListAdapter(
 
     fun resetExpanded() {
         expandedPosition = -1
+        notifyDataSetChanged()
+        onSelectItem()
+    }
+
+    fun updateFloorPlans(updatedFloorPlans: List<FloorPlan>) {
+        if (expandedPosition != -1) {
+            val expandedItem = floorPlans[expandedPosition]
+            updatedFloorPlans.find { it.mainAnchor.cloudAnchorId == expandedItem.mainAnchor.cloudAnchorId }?.let { plan ->
+                expandedPosition = updatedFloorPlans.indexOf(plan)
+            }
+        }
+        floorPlans = updatedFloorPlans
         notifyDataSetChanged()
         onSelectItem()
     }

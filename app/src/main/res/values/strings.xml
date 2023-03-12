@@ -55,5 +55,8 @@
     <string name="test_finish">Finish Test</string>
     <string name="anchor_tracking_interval_hint">Log Interval:</string>
     <string name="anchor_tracking_distance_hint">Distance between Anchors:</string>
+    <string name="settings">Settings</string>
+    <string name="setting_logging">Logging</string>
+    <string name="setting_anchor_tracking_test">Anchor Tracking Test</string>
 
 </resources>

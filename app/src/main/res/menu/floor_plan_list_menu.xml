@@ -21,29 +21,26 @@
                 <item
                     android:id="@+id/sort_floor_plans_by_distance"
                     android:title="@string/sort_by_distance" />
-                <item
-                    android:id="@+id/sort_floor_plans_by_created"
-                    android:title="@string/sort_by_created" />
             </group>
         </menu>
     </item>
     <item
         android:id="@+id/settings"
         android:icon="@drawable/ic_baseline_settings_24"
-        android:title="Settings"
+        android:title="@string/settings"
         app:showAsAction="always">
 
         <menu>
             <item
                 android:id="@+id/setting_enable_logging"
                 android:checkable="true"
-                android:title="Logging"
+                android:title="@string/setting_logging"
                 app:actionViewClass="android.widget.CheckBox"
                 app:showAsAction="always" />
             <item
                 android:id="@+id/setting_start_anchor_tracking_test"
                 android:icon="@drawable/ic_baseline_construction_24"
-                android:title="Anchor Tracking Test"
+                android:title="@string/setting_anchor_tracking_test"
                 app:showAsAction="always" />
         </menu>
     </item>
