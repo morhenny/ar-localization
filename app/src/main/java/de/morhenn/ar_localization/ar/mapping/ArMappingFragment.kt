@@ -372,7 +372,6 @@ class ArMappingFragment : Fragment() {
                             Toast.makeText(requireContext(), "Could not create floor plan with geoPose, since initialGeoPose is null", Toast.LENGTH_SHORT).show()
                             floorPlan = FloorPlan(CloudAnchor("initial", 0, anchor.cloudAnchorId, 0.0, 0.0, 0.0, 0.0, SerializableQuaternion(anchorNode.quaternion)))
                         }
-                        //TODO possibly find out what floor the initial anchor is on
                         isInitialAnchorPlaced = true
                         Log.d(TAG, "Cloud anchor hosted successfully")
                     } else {

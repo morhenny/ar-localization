@@ -1,7 +1,6 @@
 package de.morhenn.ar_localization
 
 import android.app.Application
-import de.morhenn.ar_localization.utils.FileLog
 
 class MyApplication : Application() {
 
@@ -15,10 +14,6 @@ class MyApplication : Application() {
         super.onCreate()
         if (!initialized) {
             initialized = true
-            //initialize all static utils
-
-            FileLog.init(applicationContext, true)
-            Thread.setDefaultUncaughtExceptionHandler { _, e -> FileLog.fatal(e) }
         }
     }
 }

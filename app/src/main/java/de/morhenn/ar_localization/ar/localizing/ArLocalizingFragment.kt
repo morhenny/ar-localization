@@ -423,11 +423,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                             arLocalizingBottomSheetEditLayoutWhileTracking.visibility = View.GONE
                             arLocalizingBottomSheetEditLayoutOnSelection.visibility = View.GONE
                             arLocalizingBottomSheetEditLayoutTrackingInterval.visibility = View.GONE
-                            arLocalizingBottomSheetTitle.text = when (arState) {
-                                TRACKING -> getString(R.string.ar_localizing_bottom_sheet_title_tracking, currentCloudAnchor?.text)
-                                RESOLVING -> getString(R.string.ar_localizing_bottom_sheet_title_resolving)
-                                else -> getString(R.string.ar_localizing_bottom_sheet_title_collapsed)
-                            }
                             arLocalizingBottomSheetMap.layoutParams.height = collapsedHeight
                         }
                         map?.uiSettings?.isIndoorLevelPickerEnabled = false
@@ -441,7 +436,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                             arLocalizingBottomSheetEditLayoutWhileTracking.visibility = View.VISIBLE
                             arLocalizingBottomSheetEditLayoutOnSelection.visibility = View.VISIBLE
                             arLocalizingBottomSheetEditLayoutTrackingInterval.visibility = View.VISIBLE
-                            arLocalizingBottomSheetTitle.text = getString(R.string.ar_localizing_bottom_sheet_title_expanded)
                             arLocalizingBottomSheetMap.layoutParams.height = (bottomSheet.height / 2) - 25
                         }
                         map?.uiSettings?.isIndoorLevelPickerEnabled = true
@@ -477,7 +471,6 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     } else {
                         Log.d(TAG, "Auto mode button clicked, but too many anchors to be resolved")
                         Toast.makeText(requireContext(), "Too many anchors to automatically resolve all, please select one from the list", Toast.LENGTH_SHORT).show()
-                        //TODO move info from toast
                         bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
                         val anim = AlphaAnimation(0.2f, 1.0f).apply {
                             duration = 400
@@ -607,7 +600,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                             "EG", "G" -> resolveAnyOfClosestCloudAnchors(floor = 0)
                             "UG", "1UG" -> resolveAnyOfClosestCloudAnchors(floor = -1)
                             "OG", "1OG" -> resolveAnyOfClosestCloudAnchors(floor = 1)
-                            //TODO potentially more exceptions
+                            //TODO potentially more exceptions depending on country and city of use, since the floor names are not standardized
                         }
                     }
                 }
@@ -935,10 +928,11 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         arState = newState
         binding.arLocalizingProgressBar.visibility = arState.progressBarVisibility
         binding.arLocalizingBottomSheetCancelResolveButton.visibility = arState.cancelButtonVisibility
-        if (arState == TRACKING) {
-            binding.arLocalizingBottomSheetTitle.text = getString(R.string.ar_localizing_bottom_sheet_title_tracking, currentCloudAnchor?.text)
+        binding.arLocalizingHintText.text = when (newState) {
+            NOT_INITIALIZED -> getString(R.string.ar_localizing_hint_not_initialized)
+            RESOLVING -> getString(R.string.ar_localizing_hint_resolving, maxResolvingAmountOnSelected.toString())
+            TRACKING -> getString(R.string.ar_localizing_hint_tracking, currentCloudAnchor?.text)
         }
-        //TODO rework state changes and especially the user text hints
     }
 
     private suspend fun loadModels() {

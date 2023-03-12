@@ -12,16 +12,20 @@
         android:elevation="4dp" />
 
     <TextView
-        android:id="@+id/ar_localizing_bottom_sheet_title"
+        android:id="@+id/ar_localizing_hint_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:background="@drawable/background_hint"
+        android:elevation="5dp"
+        android:gravity="center_horizontal"
         android:padding="4dp"
-        android:text="@string/ar_localizing_bottom_sheet_title_collapsed"
+        android:paddingHorizontal="12dp"
+        android:text="@string/ar_localizing_hint_not_initialized"
         android:textAlignment="center"
         android:textSize="16sp"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/ar_localizing_geospatial_acc_view" />
+        app:layout_anchor="@id/ar_localizing_geospatial_acc_view"
+        app:layout_anchorGravity="bottom" />
 
     <io.github.sceneview.ar.ArSceneView
         android:id="@+id/sceneView_localizing"
