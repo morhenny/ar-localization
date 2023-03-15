@@ -134,6 +134,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var userPositionMarker: Marker? = null
     private var geospatialPositionMarker: Marker? = null
     private var currentResolvedMapMarker: Marker? = null
+    private var currentNavTargetMarker: Marker? = null
+    private var currentNavMapMarker: MutableList<Marker> = ArrayList()
 
     private var lastPositionUpdate = 0L
     private var lastResolveUpdate = 0L
@@ -586,6 +588,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     clearNavigationIndication()
                     navTarget = null
                     navMappingPoints.clear()
+                    updateNavMapMarker()
                     updateState(TRACKING)
                 }
             }
@@ -808,6 +811,27 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         currentResolvedMapMarker = map?.addMarker(MarkerOptions().position(LatLng(currentCloudAnchor!!.lat, currentCloudAnchor!!.lng)).title(currentCloudAnchor!!.cloudAnchorId).icon(icon))
     }
 
+    private fun updateNavMapMarker() {
+        currentNavMapMarker.forEach {
+            it.remove()
+        }
+        currentNavTargetMarker?.remove()
+        val icon = BitmapDescriptorFactory.fromBitmap(getBitmapFromVectorDrawable(R.drawable.ic_outline_flag_24_nav_highlighted, requireContext()))
+        navTarget?.let {
+            currentNavTargetMarker = map?.addMarker(MarkerOptions().position(LatLng(it.lat, it.lng)).icon(icon))
+        }
+
+        val mainAnchorLatLng = LatLng(floorPlan.mainAnchor.lat, floorPlan.mainAnchor.lng)
+        val pointIcon = getBitmapFromVectorDrawable(R.drawable.ic_baseline_green_dot_3, requireContext())
+
+        navMappingPoints.forEach {
+            val pointLatLng = GeoUtils.getLatLngByLocalCoordinateOffset(mainAnchorLatLng.latitude, mainAnchorLatLng.longitude, floorPlan.mainAnchor.compassHeading, it.x, it.z)
+            map?.addMarker(MarkerOptions().position(pointLatLng).icon(BitmapDescriptorFactory.fromBitmap(pointIcon)))?.let { marker ->
+                currentNavMapMarker.add(marker)
+            }
+        }
+    }
+
     private fun findCloudAnchorFromId(id: String): CloudAnchor? {
         return if (floorPlan.mainAnchor.cloudAnchorId == id) {
             floorPlan.mainAnchor
@@ -877,7 +901,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             updateResolveButtons(ANCHOR)
             updateState(RESOLVING)
             resolveAnyOfClosestCloudAnchors(GeoPose(cloudAnchor.lat, cloudAnchor.lng, cloudAnchor.alt, 0.0))
-        } else if (arState == TRACKING) {
+        } else if (arState == TRACKING || arState == NAVIGATING) {
             //Start navigation indication to selected cloud anchor
 
             findMappingPointsBetweenPositionAndTarget(cloudAnchor)?.let { mappingPointsBetweenCurrentAndTarget ->
@@ -901,6 +925,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     }
 
     private fun highlightRouteAndTarget(initial: Boolean) {
+        updateNavMapMarker()
         if (!initial) {
             clearNavigationIndication()
         }
@@ -932,6 +957,9 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     private fun updateRouteHighlight(updatedMappingPointList: List<MappingPoint>) {
         val mappingPointsToRemove = navMappingPoints.minus(updatedMappingPointList.toSet())
+        navMappingPoints.clear()
+        navMappingPoints.addAll(updatedMappingPointList)
+        updateNavMapMarker()
         mappingPointsToRemove.forEach {
             navMappingNodes.find { node -> node.position == Position(it.x, it.y, it.z) }?.let { node ->
                 node.detachAnchor()

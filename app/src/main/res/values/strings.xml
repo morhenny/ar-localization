@@ -55,7 +55,7 @@
     <string name="setting_logging">Logging</string>
     <string name="setting_anchor_tracking_test">Anchor Tracking Test</string>
     <string name="ar_localizing_hint_not_initialized">Point your phone towards a street for VPS or select one of the options below to find the first cloud anchor</string>
-    <string name="ar_localizing_hint_resolving">Trying to resolve any of up to %1$s anchors, \nmove the phone around until one is found</string>
+    <string name="ar_localizing_hint_resolving">Trying to resolve any of up to %1$s anchors \nMove the phone around the mapped area until one is found</string>
     <string name="ar_localizing_hint_tracking">"Successfully tracking and localizing\nYou can select an anchor for navigation"</string>
-    <string name="ar_localizing_hint_navigating">"Route to anchor: '%1$s' is shown on screen,\nfollow the green markers until you reach your target\n Tap here to cancel"</string>
+    <string name="ar_localizing_hint_navigating">"Route to anchor: '%1$s' is shown on screen\nFollow the green markers until you reach your target\n Tap here to cancel"</string>
 </resources>
