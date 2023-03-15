@@ -24,6 +24,7 @@ enum class ArLocalizingStates(
     NOT_INITIALIZED(cancelButtonVisibility = GONE),
     RESOLVING(progressBarVisibility = VISIBLE, cancelButtonVisibility = VISIBLE),
     TRACKING(cancelButtonVisibility = GONE),
+    NAVIGATING(cancelButtonVisibility = GONE),
 }
 
 enum class ArResolveModes(
@@ -48,4 +49,6 @@ enum class ModelName {
     GEO_ANCHOR,
     ANCHOR_RESOLVED,
     ANCHOR_TRACKING_PREVIEW,
+    NAV_BALL,
+    NAV_TARGET,
 }

@@ -53,6 +53,7 @@ import de.morhenn.ar_localization.databinding.FragmentArLocalizingBinding
 import de.morhenn.ar_localization.model.CloudAnchor
 import de.morhenn.ar_localization.model.FloorPlan
 import de.morhenn.ar_localization.model.GeoPose
+import de.morhenn.ar_localization.model.MappingPoint
 import de.morhenn.ar_localization.utils.DataExport
 import de.morhenn.ar_localization.utils.GeoUtils
 import de.morhenn.ar_localization.utils.Utils
@@ -124,6 +125,11 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private var currentRenderedMappingPoints = mutableListOf<ArNode>()
     private var currentRenderedAnchorPreviews = mutableListOf<ArNode>()
     private val previewAnchorMap = mutableMapOf<CloudAnchor, ArNode>()
+
+    private var navTarget: CloudAnchor? = null
+    private var navTargetNode: ArNode? = null
+    private val navMappingPoints = mutableListOf<MappingPoint>()
+    private val navMappingNodes = mutableListOf<ArNode>()
 
     private var userPositionMarker: Marker? = null
     private var geospatialPositionMarker: Marker? = null
@@ -221,7 +227,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             earth = sceneView.arSession?.earth
             Log.d(TAG, "Geospatial API initialized and earth object assigned")
         }
-        if (arState == TRACKING) {
+        if (arState == TRACKING || arState == NAVIGATING) {
 
             val currentMillis = System.currentTimeMillis()
             if (currentMillis - lastResolveUpdate > trackingResolveInterval) {
@@ -401,6 +407,12 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         }
         currentRenderedAnchorPreviews.removeAll(anchorPreviewsToRemove)
         currentRenderedAnchorPreviews.addAll(newAnchorPreviews)
+
+        navTarget?.let {
+            findMappingPointsBetweenPositionAndTarget(it)?.let { list ->
+                updateRouteHighlight(list)
+            }
+        }
     }
 
     private fun initializeUIElements() {
@@ -568,6 +580,15 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                     anchorListAdapter.indicateResolving(mutableListOf())
                 }
             }
+            arLocalizingHintText.setOnClickListener {
+                if (arState == NAVIGATING) {
+                    Log.d(TAG, "Cancelling navigation clicked")
+                    clearNavigationIndication()
+                    navTarget = null
+                    navMappingPoints.clear()
+                    updateState(TRACKING)
+                }
+            }
         }
     }
 
@@ -644,7 +665,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
     private fun findNextCloudAnchorAndResolve() {
         userPose?.let {
             Log.d(TAG, "Cancelling resolve tasks")
-            updateState(TRACKING)
+            if (arState != NAVIGATING) updateState(TRACKING)
             resolveAnyOfClosestCloudAnchors(it)
         }
     }
@@ -705,7 +726,7 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
 
     private fun resolveAnyOfClosestCloudAnchors(geoPose: GeoPose? = null, floor: Int? = null) {
         Log.d(TAG, "Trying to resolve any of closest cloud anchors")
-        val listOfAnchors = if (arState == TRACKING) {
+        val listOfAnchors = if (arState == TRACKING || arState == NAVIGATING) {
             getAnchorsToResolveWhileTracking()
         } else if (floor != null) {
             getAnchorsOnSpecificFloor(floor)
@@ -757,12 +778,20 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
                             delay(DELAY_POSITION_UPDATE) //wait for the node to show at the correct position
                             isVisible = true
                             removeCloudAnchorPreviews(previewAnchor, lastAnchor, this@apply, previewPos)
+
+                            navTarget?.let { target ->
+                                findMappingPointsBetweenPositionAndTarget(target)?.let { list ->
+                                    navMappingPoints.clear()
+                                    navMappingPoints.addAll(list)
+                                    highlightRouteAndTarget(true)
+                                }
+                            }
                         }
                     }
                     binding.arLocalizingBottomSheetCurrentlyResolved.text = getString(R.string.ar_localizing_currently_resolved, currentCloudAnchor?.text)
                     updateResolvedMapMarker()
 
-                    updateState(TRACKING)
+                    if (arState != NAVIGATING) updateState(TRACKING)
                     Log.d(TAG, "Successfully resolved cloud anchor with id: ${anchor.cloudAnchorId} and name: ${currentCloudAnchor?.text}")
                 } else {
                     if (arState != TRACKING) {
@@ -849,8 +878,118 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             updateState(RESOLVING)
             resolveAnyOfClosestCloudAnchors(GeoPose(cloudAnchor.lat, cloudAnchor.lng, cloudAnchor.alt, 0.0))
         } else if (arState == TRACKING) {
-            //TODO navigation?
+            //Start navigation indication to selected cloud anchor
+
+            findMappingPointsBetweenPositionAndTarget(cloudAnchor)?.let { mappingPointsBetweenCurrentAndTarget ->
+                if (navTarget == null) {
+                    navTarget = cloudAnchor
+                    navMappingPoints.addAll(mappingPointsBetweenCurrentAndTarget)
+                    highlightRouteAndTarget(true)
+                } else {
+                    if (navTarget == cloudAnchor) {
+                        Toast.makeText(requireContext(), "Already navigating to this anchor", Toast.LENGTH_SHORT).show()
+                    } else {
+                        navTarget = cloudAnchor
+                        navMappingPoints.clear()
+                        navMappingPoints.addAll(mappingPointsBetweenCurrentAndTarget)
+                        highlightRouteAndTarget(false)
+                    }
+                }
+                updateState(NAVIGATING)
+            }
         }
+    }
+
+    private fun highlightRouteAndTarget(initial: Boolean) {
+        if (!initial) {
+            clearNavigationIndication()
+        }
+        navMappingPoints.forEach {
+            val relativePositionOfMappingPointToCurrentAnchor = Position(it.x, it.y, it.z) - Position(currentCloudAnchor!!.xToMain, currentCloudAnchor!!.yToMain, currentCloudAnchor!!.zToMain)
+
+            val node = ArNode()
+            lifecycleScope.launch(Dispatchers.Main) {
+                node.apply {
+                    this.parent = currentCloudAnchorNode
+                    this.position = relativePositionOfMappingPointToCurrentAnchor
+                    setModel(modelMap[NAV_BALL])
+                }
+            }
+            navMappingNodes.add(node)
+        }
+
+        val relativePositionOfTargetNodeToCurrentAnchor = Position(navTarget!!.xToMain, navTarget!!.yToMain, navTarget!!.zToMain) - Position(currentCloudAnchor!!.xToMain, currentCloudAnchor!!.yToMain, currentCloudAnchor!!.zToMain)
+        val targetNode = ArNode()
+        lifecycleScope.launch(Dispatchers.Main) {
+            targetNode.apply {
+                this.parent = currentCloudAnchorNode
+                this.position = relativePositionOfTargetNodeToCurrentAnchor
+                setModel(modelMap[NAV_TARGET])
+            }
+        }
+        navTargetNode = targetNode
+    }
+
+    private fun updateRouteHighlight(updatedMappingPointList: List<MappingPoint>) {
+        val mappingPointsToRemove = navMappingPoints.minus(updatedMappingPointList.toSet())
+        mappingPointsToRemove.forEach {
+            navMappingNodes.find { node -> node.position == Position(it.x, it.y, it.z) }?.let { node ->
+                node.detachAnchor()
+                node.parent = null
+                node.destroy()
+                navMappingNodes.remove(node)
+            }
+        }
+    }
+
+    private fun findMappingPointsBetweenPositionAndTarget(cloudAnchor: CloudAnchor): MutableList<MappingPoint>? {
+        Log.d(TAG, "Finding MappingPoints for navigation")
+
+        val closestMappingPointToTarget = findClosestMappingPoint(cloudAnchor)
+        val closestMappingPointToCurrent = findClosestMappingPoint()
+
+        val indexOfCurrent = floorPlan.mappingPointList.indexOf(closestMappingPointToCurrent)
+        val indexOfTarget = floorPlan.mappingPointList.indexOf(closestMappingPointToTarget)
+
+        return if (indexOfTarget == -1 || indexOfCurrent == -1) {
+            null
+        } else if (indexOfTarget < indexOfCurrent) {
+            floorPlan.mappingPointList.subList(indexOfTarget, indexOfCurrent)
+        } else {
+            floorPlan.mappingPointList.subList(indexOfCurrent, indexOfTarget)
+        }
+    }
+
+    private fun findClosestMappingPoint(cloudAnchor: CloudAnchor): MappingPoint {
+        return floorPlan.mappingPointList.minBy {
+            GeoUtils.distanceBetweenTwo3dCoordinates(Position(cloudAnchor.xToMain, cloudAnchor.yToMain, cloudAnchor.zToMain), Position(it.x, it.y, it.z))
+        }
+    }
+
+    private fun findClosestMappingPoint(): MappingPoint? {
+        val cloudAnchorRelativePos = Position(currentCloudAnchor!!.xToMain, currentCloudAnchor!!.yToMain, currentCloudAnchor!!.zToMain)
+        val closestMappingPointNode = currentRenderedMappingPoints.minBy {
+            val cameraWorldPos = Position(sceneView.camera.worldPosition.x, sceneView.camera.worldPosition.y, sceneView.camera.worldPosition.z)
+            GeoUtils.distanceBetweenTwo3dCoordinates(cameraWorldPos, Position(it.worldPosition.x, it.worldPosition.y, it.worldPosition.z))
+        }
+        val relativePosOfClosestMappingPoint = cloudAnchorRelativePos + closestMappingPointNode.position
+
+        return floorPlan.mappingPointList.find { it.x == relativePosOfClosestMappingPoint.x && it.y == relativePosOfClosestMappingPoint.y && it.z == relativePosOfClosestMappingPoint.z }
+    }
+
+    private fun clearNavigationIndication() {
+        navMappingNodes.forEach {
+            it.detachAnchor()
+            it.parent = null
+            it.destroy()
+        }
+        navMappingNodes.clear()
+        navTargetNode?.let {
+            it.detachAnchor()
+            it.parent = null
+            it.destroy()
+        }
+        navTargetNode = null
     }
 
     private fun showFloorSelectionDialog() {
@@ -931,7 +1070,8 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
         binding.arLocalizingHintText.text = when (newState) {
             NOT_INITIALIZED -> getString(R.string.ar_localizing_hint_not_initialized)
             RESOLVING -> getString(R.string.ar_localizing_hint_resolving, maxResolvingAmountOnSelected.toString())
-            TRACKING -> getString(R.string.ar_localizing_hint_tracking, currentCloudAnchor?.text)
+            TRACKING -> getString(R.string.ar_localizing_hint_tracking)
+            NAVIGATING -> getString(R.string.ar_localizing_hint_navigating, navTarget?.text)
         }
     }
 
@@ -958,6 +1098,14 @@ class ArLocalizingFragment : Fragment(), OnMapReadyCallback {
             .await(lifecycle)
         modelMap[ANCHOR_TRACKING_PREVIEW] = ModelRenderable.builder()
             .setSource(context, Uri.parse("models/anchorTrackingPreview.glb"))
+            .setIsFilamentGltf(true)
+            .await(lifecycle)
+        modelMap[NAV_BALL] = ModelRenderable.builder()
+            .setSource(context, Uri.parse("models/icoSphereGreen.glb"))
+            .setIsFilamentGltf(true)
+            .await(lifecycle)
+        modelMap[NAV_TARGET] = ModelRenderable.builder()
+            .setSource(context, Uri.parse("models/anchorNavTarget.glb"))
             .setIsFilamentGltf(true)
             .await(lifecycle)
     }
